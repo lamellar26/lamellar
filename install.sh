@@ -20,7 +20,8 @@
 set -eu
 
 HOME_DIR="${LAMELLAR_HOME:-$HOME/.lamellar}"
-SRC="${LAMELLAR_SRC:-https://github.com/lamellar26/lamellar/archive/refs/heads/main.tar.gz}"
+SRC="${LAMELLAR_SRC:-https://lamellar.org/dl/main.tar.gz}"   # redirects to the GitHub tarball
+SRC_FALLBACK="https://github.com/lamellar26/lamellar/archive/refs/heads/main.tar.gz"
 PORT="${LAMELLAR_PORT:-8102}"
 BIN_DIR="$HOME/.local/bin"
 OS="$(uname -s)"
@@ -183,7 +184,8 @@ fi
 say "Installing lamellar into $HOME_DIR/app"
 stage="$(mktemp -d)"
 case "$SRC" in
-  http://*|https://*) fetch "$SRC" "$stage/src.tar.gz"; tar -xzf "$stage/src.tar.gz" -C "$stage"; rm -f "$stage/src.tar.gz"
+  http://*|https://*) fetch "$SRC" "$stage/src.tar.gz" 2>/dev/null || { [ -z "${LAMELLAR_SRC:-}" ] && fetch "$SRC_FALLBACK" "$stage/src.tar.gz"; } || die "could not download lamellar from $SRC"
+                      tar -xzf "$stage/src.tar.gz" -C "$stage"; rm -f "$stage/src.tar.gz"
                       new="$(find "$stage" -mindepth 1 -maxdepth 1 -type d | head -n1)" ;;
   *.tar.gz)           tar -xzf "$SRC" -C "$stage"; new="$(find "$stage" -mindepth 1 -maxdepth 1 -type d | head -n1)" ;;
   *)                  [ -f "$SRC/cli.py" ] || die "LAMELLAR_SRC=$SRC is not a lamellar directory"

@@ -17,6 +17,7 @@
 #   LAMELLAR_YES=1  never ask, take the defaults
 #   LAMELLAR_NO_BROWSER=1  do not open a browser at the end
 #   LAMELLAR_NO_SMOKE=1    doctor skips the one-question model test (does not load the model)
+#   LAMELLAR_PIP=1         set by "lamellar setup" (pip install): skip the code copy and the launcher
 set -eu
 
 HOME_DIR="${LAMELLAR_HOME:-$HOME/.lamellar}"
@@ -71,7 +72,8 @@ find_python() {
 }
 
 say "Checking Python 3.10+"
-if ! PY="$(find_python)"; then
+if [ "${LAMELLAR_PIP:-}" = 1 ] && [ -n "${LAMELLAR_PY:-}" ]; then PY="$LAMELLAR_PY"
+elif ! PY="$(find_python)"; then
   if [ "$OS" = Linux ] && need_root; then
     if have apt-get; then $SUDO apt-get update -qq && $SUDO apt-get install -y -qq python3 >/dev/null
     elif have dnf; then $SUDO dnf install -y -q python3
@@ -181,6 +183,10 @@ else
 fi
 
 # ---------- 5. code + config ----------
+mkdir -p "$HOME_DIR"
+if [ "${LAMELLAR_PIP:-}" = 1 ]; then
+  say "Using the lamellar installed by pip ($PY)"
+else
 say "Installing lamellar into $HOME_DIR/app"
 stage="$(mktemp -d)"
 case "$SRC" in
@@ -194,6 +200,7 @@ esac
 [ -f "$new/cli.py" ] || die "download did not contain lamellar (no cli.py)"
 [ -d "$HOME_DIR/app" ] && mv "$HOME_DIR/app" "$HOME_DIR/app.prev.$$"
 mv "$new" "$HOME_DIR/app"; rm -rf "$stage" "$HOME_DIR/app.prev.$$"
+fi
 
 UI="${LAMELLAR_UI:-}"
 if [ -z "$UI" ]; then
@@ -234,6 +241,10 @@ EOF
 mkdir -p "$HOME_DIR/packs" "$HOME_DIR/work"
 
 # ---------- launcher ----------
+if [ "${LAMELLAR_PIP:-}" = 1 ]; then
+  LAUNCH="$PY -m lamellar.launcher"   # pip already installed the lamellar command
+else
+LAUNCH="$BIN_DIR/lamellar"
 mkdir -p "$BIN_DIR"
 cat >"$BIN_DIR/lamellar" <<EOF
 #!/bin/sh
@@ -269,9 +280,11 @@ esac
 EOF
 chmod +x "$BIN_DIR/lamellar"
 case ":$PATH:" in *":$BIN_DIR:"*) ;; *) warn "$BIN_DIR is not on your PATH. Add this to your shell profile: export PATH=\"\$HOME/.local/bin:\$PATH\"" ;; esac
+fi
+mkdir -p "$HOME_DIR/logs"
 
 # ---------- 6. start + Open WebUI + browser ----------
-"$BIN_DIR/lamellar" restart   # restart, so a re-run picks up the new code
+$LAUNCH restart   # restart, so a re-run picks up the new code
 
 URL="http://localhost:$PORT/"
 if [ "$UI" != builtin ]; then
@@ -297,7 +310,7 @@ fi
 # ---------- 7. doctor ----------
 say "Running lamellar doctor"
 if [ "${LAMELLAR_NO_SMOKE:-}" = 1 ]; then set -- --no-smoke; else set --; fi
-"$BIN_DIR/lamellar" doctor "$@" || warn "doctor found problems; the lines marked FAIL say how to fix them."
+$LAUNCH doctor "$@" || warn "doctor found problems; the lines marked FAIL say how to fix them."
 
 say "Done. Open $URL"
 say "Commands: lamellar start | stop | status | logs | doctor | run \"task\""

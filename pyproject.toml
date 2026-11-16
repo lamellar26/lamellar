@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lamellar"
+dynamic = ["version"]
+description = "Armor for small local models: rules checked by code before the answer reaches you. Fully offline."
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "Apache-2.0"}
+authors = [{name = "The lamellar Authors"}]
+keywords = ["llm", "local-llm", "ollama", "guardrails", "agent", "offline"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = []
+
+[project.urls]
+Homepage = "https://lamellar.org"
+Source = "https://github.com/lamellar26/lamellar"
+
+[project.scripts]
+lamellar = "lamellar.launcher:main"
+
+[tool.setuptools.packages.find]
+include = ["lamellar*"]
+
+[tool.setuptools.package-data]
+lamellar = ["entry/ui.html"]
+
+[tool.setuptools.dynamic]
+version = {attr = "lamellar.__version__"}

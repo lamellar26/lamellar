@@ -61,6 +61,9 @@
   Want to read it first? <a href="/install.sh">install.sh</a> is plain shell.</p>
   <p class="small"><b>Already have Ollama and a model?</b> Name it, and nothing is downloaded or reinstalled:</p>
   <div class="install"><pre>curl -fsSL https://lamellar.org/install.sh | LAMELLAR_MODEL=qwen3.8:27b-96k sh</pre></div>
+  <p class="small"><b>Prefer pip?</b> Same result in two steps:</p>
+  <div class="install"><pre>pip install lamellar
+lamellar setup</pre></div>
   <p class="small">The context length comes from the model's <code>num_ctx</code>. Ask for more with <code>LAMELLAR_CTX=65536</code>; your model is not changed, a copy is built.</p>
 
   <h2>With and without lamellar</h2>

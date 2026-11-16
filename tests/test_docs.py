@@ -15,7 +15,7 @@ class Docs(unittest.TestCase):
         for d, _, fs in os.walk(os.path.join(ROOT, 'lamellar')):
             for f in fs:
                 if f.endswith('.py'): emitted |= set(re.findall(r"emit\('(\w+)'", open(os.path.join(d, f), encoding='utf-8').read()))
-        emitted |= set(re.findall(r"emit\(type='(\w+)'", open(os.path.join(ROOT, 'cli.py'), encoding='utf-8').read()))
+        emitted |= set(re.findall(r"emit\(type='(\w+)'", open(os.path.join(ROOT, 'lamellar', 'worker.py'), encoding='utf-8').read()))
         for t in emitted: self.assertIn(f'"type":"{t}"', doc, t)
 
 

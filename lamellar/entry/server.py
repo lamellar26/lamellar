@@ -141,7 +141,7 @@ class Entry:
     def worker_cmd(self, chat, task):
         if self.cfg.get('worker_cmd'): base = list(self.cfg['worker_cmd'])
         else:
-            base = [sys.executable, os.path.join(ROOT, 'cli.py')]
+            base = [sys.executable, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'worker.py')]
             if self.cfg.get('worker_config'): base += ['--config', os.path.expanduser(self.cfg['worker_config'])]
         return base + ['--session', f"{self.cfg['bot']}-{chat}", '--bot', self.cfg['bot'], '--chat', chat, task]
 

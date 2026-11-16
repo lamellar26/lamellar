@@ -12,6 +12,15 @@ No curl (fresh Ubuntu desktop): `wget -qO- https://lamellar.org/install.sh | sh`
 
 Windows: not supported yet (planned, via WSL2).
 
+## pip
+
+```
+pip install lamellar
+lamellar setup
+```
+
+`pip install` puts the `lamellar` command on your PATH. `lamellar setup` then runs the same installer in pip mode: Ollama, model, config and the first `lamellar doctor`. It does not copy the code to `~/.lamellar/app`, because pip already installed it. The commands after that are the same: `lamellar start | stop | status | logs | doctor | run "task" | open`.
+
 When it finishes, your browser opens `http://localhost:8102/`. Ask it something.
 
 ## What the installer does

@@ -10,11 +10,7 @@ curl -fsSL https://lamellar.org/install.sh | sh
 
 No curl (fresh Ubuntu desktop): `wget -qO- https://lamellar.org/install.sh | sh`
 
-Windows 10/11 (PowerShell):
-
-```
-irm https://lamellar.org/install.ps1 | iex
-```
+Windows: not supported yet (planned, via WSL2).
 
 When it finishes, your browser opens `http://localhost:8102/`. Ask it something.
 
@@ -32,13 +28,6 @@ Running it again upgrades the code and keeps a backup of your config (`*.json.ba
 
 It never installs GPU drivers. If you have an NVIDIA card without a driver, it says so, uses the CPU,
 and tells you how to install the driver.
-
-### Windows
-
-lamellar's agent runs shell commands, so on Windows it lives inside WSL2 (a small Ubuntu managed by
-Windows). `install.ps1` turns on WSL2 (asks for admin once, may need one reboot and then continues by
-itself), runs the Linux installer inside it, adds a `lamellar` command, and starts lamellar at login.
-Your NVIDIA driver on Windows already gives WSL the GPU; nothing to install inside Ubuntu.
 
 ## Which model
 

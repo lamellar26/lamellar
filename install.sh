@@ -96,7 +96,7 @@ if ! have ollama; then
   elif [ "$OS" = Darwin ]; then
     if have brew; then brew install ollama; else die "Install Ollama from https://ollama.com/download (open the app once), then run this again."; fi
   else
-    die "Unsupported system $OS. On Windows use install.ps1."
+    die "Unsupported system $OS. Windows is not supported yet."
   fi
   have ollama || die "Ollama install failed. Install it from https://ollama.com/download and run this again."
   WE_INSTALLED_OLLAMA=1

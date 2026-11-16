@@ -8,19 +8,17 @@ Status: in development (alpha). Provided as is, with no guarantee of support.
 
 ```
 curl -fsSL https://lamellar.org/install.sh | sh        # Linux, macOS
-irm https://lamellar.org/install.ps1 | iex             # Windows (PowerShell)
 ```
 
 It installs Ollama if needed, picks a model for your GPU, opens `http://localhost:8102/` and runs `lamellar doctor`.
-Details: `docs/INSTALL.md`.
+Windows is not supported yet. Details: `docs/INSTALL.md`.
 
 ## Layout
-
-- `lamellar/doctor.py`  `lamellar doctor`: checks the install and says how to fix what is wrong
 
 - `lamellar/core/`  loop, tools, command execution
 - `lamellar/armor/`  requirements store, checks, bounce-back, guard
 - `lamellar/entry/`  web interface, queueing, conversations
+- `lamellar/doctor.py`  `lamellar doctor`: checks the install and says how to fix what is wrong
 - `cli.py`  command-line entry point
 - `EVENTS.md`  event format between the layers
 

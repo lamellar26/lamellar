@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>lamellar: armor for small local models</title>
+<meta name="description" content="A small, readable, fully offline agent toolkit for local models, with checks before delivery. One-line install.">
+<style>
+  :root { --fg:#1d1f21; --muted:#5f6368; --bg:#fbfaf7; --card:#fff; --line:#e4e1d9; --accent:#8a5a1e; --code:#f3f1ec; }
+  @media (prefers-color-scheme: dark) { :root { --fg:#e8e6e1; --muted:#a3a09a; --bg:#151515; --card:#1d1d1d; --line:#333; --accent:#d9a25b; --code:#242424; } }
+  * { box-sizing: border-box; }
+  body { margin:0; font:17px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; color:var(--fg); background:var(--bg); }
+  main { max-width: 760px; margin: 0 auto; padding: 56px 22px 80px; }
+  h1 { font-size: 2.4rem; margin: 0 0 4px; letter-spacing: -0.02em; }
+  h2 { font-size: 1.25rem; margin: 44px 0 10px; }
+  .tag { color: var(--muted); font-size: 1.15rem; margin: 0 0 28px; }
+  .badge { display:inline-block; font-size:.8rem; border:1px solid var(--line); border-radius:99px; padding:1px 10px; color:var(--muted); margin-left:8px; vertical-align: middle; }
+  pre, code { font-family: ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size: .92em; }
+  code { background: var(--code); padding: 1px 5px; border-radius: 4px; }
+  .install { position:relative; background: var(--card); border:1px solid var(--line); border-radius: 10px; padding: 16px 18px; margin: 10px 0 6px; overflow-x:auto; }
+  .install pre { margin:0; white-space: pre; }
+  .install button { position:absolute; top:10px; right:10px; font:inherit; font-size:.8rem; padding:3px 10px; border:1px solid var(--line); background:var(--bg); color:var(--fg); border-radius:6px; cursor:pointer; }
+  .small { color: var(--muted); font-size: .92rem; }
+  ul { padding-left: 1.2em; } li { margin: 4px 0; }
+  table { border-collapse: collapse; width: 100%; font-size: .95rem; }
+  th, td { text-align:left; padding: 7px 10px; border-bottom: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 600; }
+  a { color: var(--accent); }
+  footer { margin-top: 56px; padding-top: 18px; border-top: 1px solid var(--line); color: var(--muted); font-size: .9rem; }
+</style>
+</head>
+<body>
+<main>
+  <h1>lamellar <span class="badge">alpha</span></h1>
+  <p class="tag">Armor for small local models. A small, readable, fully offline agent toolkit that checks its work before handing it to you.</p>
+
+  <div class="install"><pre id="cmd">curl -fsSL https://lamellar.org/install.sh | sh</pre><button onclick="navigator.clipboard.writeText(document.getElementById('cmd').textContent);this.textContent='copied'">copy</button></div>
+  <p class="small">Linux and macOS. No curl? <code>wget -qO- https://lamellar.org/install.sh | sh</code>. Windows is not supported yet.
+  Want to read it first? <a href="/install.sh">install.sh</a> is plain shell.</p>
+
+  <h2>What it is</h2>
+  <ul>
+    <li><b>An agent that runs on your own machine.</b> It talks to a local model through <a href="https://ollama.com">Ollama</a>, runs shell commands and edits files in its working directory. Nothing leaves your computer.</li>
+    <li><b>Armor.</b> A lamellar is armor made of many small plates. Here the plates are rules: your requirements are stored, every answer is checked against them before delivery, and failed answers are sent back for a rewrite.</li>
+    <li><b>Guard rails.</b> Commands that touch credentials, system config, scheduling or services stop and ask a human first. Each command has a time and memory limit.</li>
+    <li><b>Small and readable.</b> About two thousand lines of Python, standard library only. Long conversations are compacted inside the core, so it keeps working on a 16 GB card.</li>
+    <li><b>A web interface included.</b> Open <code>http://localhost:8102/</code>, or connect Open WebUI or any OpenAI-compatible client to <code>/v1</code>.</li>
+  </ul>
+
+  <h2>What the installer does</h2>
+  <ol>
+    <li>Checks for Python 3.10+, installs it if missing.</li>
+    <li>Installs Ollama with its official installer if missing.</li>
+    <li>Reads your GPU memory and picks a model that fits.</li>
+    <li>Downloads the model and sets the right context length.</li>
+    <li>Writes the config to <code>~/.lamellar</code>, starts the web interface and opens your browser.</li>
+    <li>Runs <code>lamellar doctor</code>, which checks everything and says how to fix anything that is wrong.</li>
+  </ol>
+  <p class="small">It never installs GPU drivers. Running it again upgrades the code and keeps a backup of your config.</p>
+
+  <h2>Which model you get</h2>
+  <table>
+    <tr><th>GPU memory</th><th>Model</th><th>Context</th></tr>
+    <tr><td>16 GB or more</td><td>qwen3.8 27B</td><td>96k</td></tr>
+    <tr><td>8 to 15 GB</td><td>qwen3.5 9B</td><td>32k</td></tr>
+    <tr><td>4 to 7 GB</td><td>qwen3.5 4B</td><td>32k</td></tr>
+    <tr><td>No GPU</td><td>qwen3.5 2B</td><td>16k, slow</td></tr>
+  </table>
+  <p class="small">Provisional; it will be replaced by measured results. Apple Silicon is picked by unified memory. Override with <code>LAMELLAR_MODEL=qwen3.5:9b</code>.</p>
+
+  <h2>After installing</h2>
+<div class="install"><pre>lamellar start | stop | status | logs
+lamellar doctor
+lamellar run "summarise the CSV files in this folder"</pre></div>
+
+  <h2>Source</h2>
+  <p><a href="https://github.com/lamellar26/lamellar">github.com/lamellar26/lamellar</a>. Apache-2.0. Provided as is, with no guarantee of support.</p>
+
+  <footer>lamellar &middot; Copyright 2026 The lamellar Authors</footer>
+</main>
+</body>
+</html>

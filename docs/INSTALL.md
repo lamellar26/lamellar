@@ -1,0 +1,96 @@
+# Install
+
+## One line
+
+Linux and macOS:
+
+```
+curl -fsSL https://lamellar.org/install.sh | sh
+```
+
+No curl (fresh Ubuntu desktop): `wget -qO- https://lamellar.org/install.sh | sh`
+
+Windows 10/11 (PowerShell):
+
+```
+irm https://lamellar.org/install.ps1 | iex
+```
+
+When it finishes, your browser opens `http://localhost:8102/`. Ask it something.
+
+## What the installer does
+
+1. Checks for Python 3.10+ (installs it with apt/dnf/pacman/brew if missing).
+2. Installs [Ollama](https://ollama.com) with its official installer if missing.
+3. Reads your GPU memory and picks a model (table below).
+4. Downloads the model and builds a local copy with the right context length (`PARAMETER num_ctx`).
+5. Puts the code in `~/.lamellar/app` and writes `~/.lamellar/worker.json` and `~/.lamellar/entry.json`.
+6. Starts the web entry, optionally starts Open WebUI in Docker, and opens your browser.
+7. Runs `lamellar doctor`.
+
+Running it again upgrades the code and keeps a backup of your config (`*.json.bak`).
+
+It never installs GPU drivers. If you have an NVIDIA card without a driver, it says so, uses the CPU,
+and tells you how to install the driver.
+
+### Windows
+
+lamellar's agent runs shell commands, so on Windows it lives inside WSL2 (a small Ubuntu managed by
+Windows). `install.ps1` turns on WSL2 (asks for admin once, may need one reboot and then continues by
+itself), runs the Linux installer inside it, adds a `lamellar` command, and starts lamellar at login.
+Your NVIDIA driver on Windows already gives WSL the GPU; nothing to install inside Ubuntu.
+
+## Which model
+
+Provisional table, to be replaced by measured results in `docs/MODELS.md`:
+
+```
+GPU memory          model          context
+16 GB or more       qwen3.8:27b    96k   (needs 4-bit KV cache, set by the installer)
+8 to 15 GB          qwen3.5:9b     32k
+4 to 7 GB           qwen3.5:4b     32k
+no GPU / < 4 GB     qwen3.5:2b     16k   (works, but slow)
+Apple Silicon       27b at 32 GB+, 9b at 16 GB+, else 4b
+```
+
+Override: `LAMELLAR_MODEL=qwen3.5:9b LAMELLAR_CTX=32768 sh install.sh`
+
+## Options
+
+```
+LAMELLAR_UI=builtin|openwebui|both   interface (default: ask; built-in if not interactive)
+LAMELLAR_MODEL / LAMELLAR_CTX        force model / context length
+LAMELLAR_PORT=8102                   web entry port
+LAMELLAR_HOME=~/.lamellar            config, logs, code
+LAMELLAR_SRC=<url .tar.gz | dir>     where to get the code
+LAMELLAR_YES=1                       never ask
+LAMELLAR_NO_BROWSER=1                do not open a browser
+```
+
+**Open WebUI**: needs Docker. The installer runs it as container `lamellar-webui` on port 3000,
+already connected to lamellar's `/v1`, protected by a random key in `entry.json`.
+
+## Commands
+
+```
+lamellar start | stop | restart | status
+lamellar logs [n]
+lamellar doctor [--no-smoke]
+lamellar run "task"        one task in the current directory, events printed as JSON lines
+lamellar open
+```
+
+## lamellar doctor
+
+Checks Python, both config files, that Ollama answers, that the model is installed and its `num_ctx`
+is at least the configured context, the GPU, that the web entry is running, and asks the model one
+question. Every failed line is followed by `fix:` telling you what to do. Exit code = number of failures.
+
+## Uninstall
+
+```
+lamellar stop
+rm -rf ~/.lamellar ~/.local/bin/lamellar
+docker rm -f lamellar-webui          # if you chose Open WebUI
+ollama rm lamellar-<model>           # the models are Ollama's; remove them there
+```

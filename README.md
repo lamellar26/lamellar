@@ -14,6 +14,12 @@ curl -fsSL https://lamellar.org/install.sh | sh        # Linux, macOS
 
 No curl? `wget -qO- https://lamellar.org/install.sh | sh`. Windows is not supported yet.
 
+Already have Ollama and a model? Name it, and nothing is downloaded or reinstalled:
+
+```
+curl -fsSL https://lamellar.org/install.sh | LAMELLAR_MODEL=qwen3.8:27b-96k sh
+```
+
 It installs Ollama if needed, picks a model for your GPU, opens `http://localhost:8102/` and runs `lamellar doctor`.
 Details: `docs/INSTALL.md`.
 
@@ -35,7 +41,7 @@ GPU memory       model          context
 no GPU           qwen3.5 2B     16k, slow
 ```
 
-Provisional; it will be replaced by measured results. Apple Silicon is picked by unified memory. Override with `LAMELLAR_MODEL=qwen3.5:9b`.
+Provisional; it will be replaced by measured results. Apple Silicon is picked by unified memory. Override with `... | LAMELLAR_MODEL=qwen3.5:9b sh`.
 
 ## After installing
 

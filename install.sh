@@ -16,6 +16,7 @@
 #   LAMELLAR_SRC    code source: a .tar.gz URL or a local directory
 #   LAMELLAR_YES=1  never ask, take the defaults
 #   LAMELLAR_NO_BROWSER=1  do not open a browser at the end
+#   LAMELLAR_NO_SMOKE=1    doctor skips the one-question model test (does not load the model)
 set -eu
 
 HOME_DIR="${LAMELLAR_HOME:-$HOME/.lamellar}"
@@ -145,16 +146,38 @@ else
   MODEL=qwen3.5:2b; CTX=16384
   warn "No usable GPU: using the smallest model ($MODEL). It works, but answers will be slow and simpler."
 fi
-MODEL="${LAMELLAR_MODEL:-$MODEL}"; CTX="${LAMELLAR_CTX:-$CTX}"
-say "GPU: $GPU (${VRAM} MB) -> model $MODEL, context $CTX"
+if [ -n "${LAMELLAR_MODEL:-}" ]; then
+  MODEL="$LAMELLAR_MODEL"; CTX="${LAMELLAR_CTX:-}"   # empty = take it from the model below
+  say "Using your model $MODEL"
+else
+  CTX="${LAMELLAR_CTX:-$CTX}"
+  say "GPU: $GPU (${VRAM} MB) -> model $MODEL, context $CTX"
+fi
 
-# ---------- 4. pull + Modelfile ----------
-LOCAL_MODEL="lamellar-$(echo "$MODEL" | tr ':/' '--'):$((CTX / 1024))k"
-say "Downloading $MODEL (this can take a while the first time)"
-ollama pull "$MODEL"
-mf="$(mktemp)"; printf 'FROM %s\nPARAMETER num_ctx %s\n' "$MODEL" "$CTX" >"$mf"
-ollama create "$LOCAL_MODEL" -f "$mf" >/dev/null; rm -f "$mf"
-say "Built $LOCAL_MODEL"
+# ---------- 4. model: reuse if present, else pull; make sure num_ctx is big enough ----------
+model_ctx() {  # num_ctx set in the model's Modelfile, 0 if none; fails if the model is not installed
+  out="$(ollama show "$1" --parameters 2>/dev/null)" || return 1
+  echo "$out" | awk '$1 == "num_ctx" { print $2; f = 1 } END { if (!f) print 0 }'
+}
+if HAVE_CTX="$(model_ctx "$MODEL")"; then
+  say "$MODEL is already installed, not downloading it"
+else
+  say "Downloading $MODEL (this can take a while the first time)"
+  ollama pull "$MODEL" || die "$MODEL is not installed here and Ollama could not download it. Check the name with: ollama list"
+  HAVE_CTX="$(model_ctx "$MODEL")" || die "$MODEL downloaded but Ollama cannot read it"
+fi
+if [ -z "$CTX" ]; then
+  if [ "$HAVE_CTX" -ge 2048 ]; then CTX="$HAVE_CTX"; else CTX=32768; fi
+fi
+if [ "$HAVE_CTX" -ge "$CTX" ]; then
+  LOCAL_MODEL="$MODEL"   # its num_ctx already covers the context: use it as is
+  say "Using $MODEL directly (num_ctx $HAVE_CTX, context $CTX)"
+else
+  LOCAL_MODEL="lamellar-$(echo "$MODEL" | tr ':/' '--'):$((CTX / 1024))k"
+  mf="$(mktemp)"; printf 'FROM %s\nPARAMETER num_ctx %s\n' "$MODEL" "$CTX" >"$mf"
+  ollama create "$LOCAL_MODEL" -f "$mf" >/dev/null; rm -f "$mf"
+  say "Built $LOCAL_MODEL (num_ctx $CTX; your $MODEL is unchanged)"
+fi
 
 # ---------- 5. code + config ----------
 say "Installing lamellar into $HOME_DIR/app"
@@ -271,7 +294,8 @@ fi
 
 # ---------- 7. doctor ----------
 say "Running lamellar doctor"
-"$BIN_DIR/lamellar" doctor || warn "doctor found problems; the lines marked FAIL say how to fix them."
+if [ "${LAMELLAR_NO_SMOKE:-}" = 1 ]; then set -- --no-smoke; else set --; fi
+"$BIN_DIR/lamellar" doctor "$@" || warn "doctor found problems; the lines marked FAIL say how to fix them."
 
 say "Done. Open $URL"
 say "Commands: lamellar start | stop | status | logs | doctor | run \"task\""

@@ -37,6 +37,9 @@
   <div class="install"><pre id="cmd">curl -fsSL https://lamellar.org/install.sh | sh</pre><button onclick="navigator.clipboard.writeText(document.getElementById('cmd').textContent);this.textContent='copied'">copy</button></div>
   <p class="small">Linux and macOS. No curl? <code>wget -qO- https://lamellar.org/install.sh | sh</code>. Windows is not supported yet.
   Want to read it first? <a href="/install.sh">install.sh</a> is plain shell.</p>
+  <p class="small"><b>Already have Ollama and a model?</b> Name it, and nothing is downloaded or reinstalled:</p>
+  <div class="install"><pre>curl -fsSL https://lamellar.org/install.sh | LAMELLAR_MODEL=qwen3.8:27b-96k sh</pre></div>
+  <p class="small">The context length comes from the model's <code>num_ctx</code>. Ask for more with <code>LAMELLAR_CTX=65536</code>; your model is not changed, a copy is built.</p>
 
   <h2>What it is</h2>
   <ul>
@@ -66,7 +69,7 @@
     <tr><td>4 to 7 GB</td><td>qwen3.5 4B</td><td>32k</td></tr>
     <tr><td>No GPU</td><td>qwen3.5 2B</td><td>16k, slow</td></tr>
   </table>
-  <p class="small">Provisional; it will be replaced by measured results. Apple Silicon is picked by unified memory. Override with <code>LAMELLAR_MODEL=qwen3.5:9b</code>.</p>
+  <p class="small">Provisional; it will be replaced by measured results. Apple Silicon is picked by unified memory. Override with <code>... | LAMELLAR_MODEL=qwen3.5:9b sh</code>.</p>
 
   <h2>After installing</h2>
 <div class="install"><pre>lamellar start | stop | status | logs

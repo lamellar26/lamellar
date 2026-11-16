@@ -1,3 +1,10 @@
+<p align="center">
+  <picture>
+    <source srcset="site/logo-dark.png" media="(prefers-color-scheme: dark)">
+    <img src="site/logo.png" alt="lamellar" width="220">
+  </picture>
+</p>
+
 # lamellar
 
 Armor for small local models: a small, readable, fully offline agent toolkit that checks its work before handing it to you.

@@ -35,6 +35,9 @@
   th, td { text-align:left; padding: 7px 10px; border-bottom: 1px solid var(--line); }
   th { color: var(--muted); font-weight: 600; }
   a { color: var(--accent); }
+  figure.wide { width: min(1120px, calc(100vw - 28px)); margin: 26px 0 8px 50%; transform: translateX(-50%); }
+  figure.wide img { display:block; width:100%; height:auto; border:1px solid var(--line); border-radius: 12px; background:#fff; }
+  figure.wide figcaption { max-width: 716px; margin: 12px auto 0; color: var(--muted); font-size: .95rem; }
   footer { margin-top: 56px; padding-top: 18px; border-top: 1px solid var(--line); color: var(--muted); font-size: .9rem; }
 </style>
 </head>
@@ -48,12 +51,29 @@
   <p><span class="badge" style="margin-left:0">alpha</span></p>
   <p class="tag">Armor for small local models. A small, readable, fully offline agent toolkit that checks its work before handing it to you.</p>
 
+  <figure class="wide">
+    <a href="/how-it-works.png"><img src="/how-it-works.png" width="3200" height="1520" alt="How lamellar works: you give a task and your rules, the local model drafts an answer, the armor checks the draft against every stored rule, and only a passing answer reaches you. A failing draft is sent back with the reason for a rewrite. Risky commands ask you first. Everything runs on your machine."></a>
+    <figcaption><b>How it works.</b> You give a task and your rules. The local model writes a draft. Before you see it, the armor checks the draft against every rule you stored. If it passes, you get the answer. If it fails, it goes back to the model with the reason and is rewritten, up to 3 times. If it still fails, you get it with a note saying which rule was missed. Risky commands stop and ask you first. All of it runs on your machine.</figcaption>
+  </figure>
+
   <div class="install"><pre id="cmd">curl -fsSL https://lamellar.org/install.sh | sh</pre><button onclick="navigator.clipboard.writeText(document.getElementById('cmd').textContent);this.textContent='copied'">copy</button></div>
   <p class="small">Linux and macOS. No curl? <code>wget -qO- https://lamellar.org/install.sh | sh</code>. Windows is not supported yet.
   Want to read it first? <a href="/install.sh">install.sh</a> is plain shell.</p>
   <p class="small"><b>Already have Ollama and a model?</b> Name it, and nothing is downloaded or reinstalled:</p>
   <div class="install"><pre>curl -fsSL https://lamellar.org/install.sh | LAMELLAR_MODEL=qwen3.8:27b-96k sh</pre></div>
   <p class="small">The context length comes from the model's <code>num_ctx</code>. Ask for more with <code>LAMELLAR_CTX=65536</code>; your model is not changed, a copy is built.</p>
+
+  <h2>With and without lamellar</h2>
+  <figure class="wide">
+    <a href="/with-without.png"><img src="/with-without.png" width="3200" height="2156" loading="lazy" alt="Comparison table. Without lamellar: you repeat your rules in every prompt, read every answer yourself, mistakes reach you, nothing stops a bad command, long tasks overflow the context, and there is no record of whether rules were followed. With lamellar: rules are said once and stored, code checks every answer, failures are rewritten, risky commands ask first, long conversations are compacted, and there are stats per rule."></a>
+  </figure>
+  <p>Same model, same machine. The difference is what happens around the model:</p>
+  <ul>
+    <li><b>Rules are said once.</b> Say "from now on, never write ..." and lamellar reads the rule back to you, stores it after you confirm, and applies it to every later answer.</li>
+    <li><b>Checked by code, not by the model.</b> Forbidden words, required text, a length limit (in characters) and regex patterns are tested by plain code on every answer, or on the file it delivers. Rules that code cannot test (for example "sound friendly") are passed to the model as a reminder only.</li>
+    <li><b>Failures go back, not to you.</b> A failing answer is returned with the reason and rewritten, up to 3 times. If it still fails, it is delivered with a note saying which rule was not met.</li>
+    <li><b>Proof.</b> Each rule keeps a record: passed first time, fixed after a bounce, still failing.</li>
+  </ul>
 
   <h2>What it is</h2>
   <ul>

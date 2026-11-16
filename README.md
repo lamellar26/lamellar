@@ -13,6 +13,12 @@ Website: https://lamellar.org
 
 Status: in development (alpha). Provided as is, with no guarantee of support.
 
+<p align="center">
+  <img src="site/how-it-works.png" alt="How lamellar works: you give a task and your rules, the local model drafts an answer, the armor checks the draft against every stored rule, and only a passing answer reaches you. A failing draft is sent back with the reason for a rewrite. Risky commands ask you first. Everything runs on your machine." width="100%">
+</p>
+
+**How it works.** You give a task and your rules. The local model writes a draft. Before you see it, the armor checks the draft against every rule you stored. If it passes, you get the answer. If it fails, it goes back to the model with the reason and is rewritten, up to 3 times. If it still fails, you get it with a note saying which rule was missed. Risky commands stop and ask you first. All of it runs on your machine.
+
 ## Install
 
 ```
@@ -29,6 +35,19 @@ curl -fsSL https://lamellar.org/install.sh | LAMELLAR_MODEL=qwen3.8:27b-96k sh
 
 It installs Ollama if needed, picks a model for your GPU, opens `http://localhost:8102/` and runs `lamellar doctor`.
 Details: `docs/INSTALL.md`.
+
+## With and without lamellar
+
+<p align="center">
+  <img src="site/with-without.png" alt="Comparison table. Without lamellar: you repeat your rules in every prompt, read every answer yourself, mistakes reach you, nothing stops a bad command, long tasks overflow the context, and there is no record of whether rules were followed. With lamellar: rules are said once and stored, code checks every answer, failures are rewritten, risky commands ask first, long conversations are compacted, and there are stats per rule." width="100%">
+</p>
+
+Same model, same machine. The difference is what happens around the model:
+
+- **Rules are said once.** Say "from now on, never write ..." and lamellar reads the rule back to you, stores it after you confirm, and applies it to every later answer.
+- **Checked by code, not by the model.** Forbidden words, required text, a length limit (in characters) and regex patterns are tested by plain code on every answer, or on the file it delivers. Rules that code cannot test (for example "sound friendly") are passed to the model as a reminder only.
+- **Failures go back, not to you.** A failing answer is returned with the reason and rewritten, up to 3 times. If it still fails, it is delivered with a note saying which rule was not met.
+- **Proof.** Each rule keeps a record: passed first time, fixed after a bounce, still failing.
 
 ## What it is
 

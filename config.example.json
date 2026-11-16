@@ -1,0 +1,11 @@
+{
+  "model": "qwen3.8:27b-96k",
+  "endpoint": "http://127.0.0.1:11434/v1",
+  "context": 98304,
+  "max_output_tokens": 8000,
+  "think": false,
+  "bash_timeout_default": 120,
+  "bash_timeout_max": 300,
+  "max_steps": 200,
+  "packs": []
+}

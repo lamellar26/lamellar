@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>lamellar</title>
+<style>
+:root{--bg:#f6f7f9;--side:#1f2933;--card:#fff;--line:#e3e6ea;--text:#1f2933;--mute:#6b7785;--acc:#2f6f5e}
+*{box-sizing:border-box}
+body{margin:0;font:15px/1.6 system-ui,-apple-system,"Segoe UI","Noto Sans TC",sans-serif;color:var(--text);background:var(--bg);display:flex;height:100vh}
+#side{width:240px;background:var(--side);color:#dfe5ea;display:flex;flex-direction:column}
+#side h1{font-size:18px;margin:16px;letter-spacing:.5px}
+#side button.new{margin:0 12px 10px;padding:9px;border:1px solid #4a5866;background:transparent;color:#fff;border-radius:8px;cursor:pointer}
+#chats{flex:1;overflow:auto}
+.chat{padding:8px 16px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:14px;display:flex;gap:6px}
+.chat:hover,.chat.on{background:#33414e}
+.chat span{flex:1;overflow:hidden;text-overflow:ellipsis}
+.chat b{visibility:hidden;color:#9aa6b2;font-weight:normal}
+.chat:hover b{visibility:visible}
+#side .foot{padding:10px 16px;font-size:12px;color:#9aa6b2}
+#side .foot a{color:#9aa6b2;cursor:pointer;text-decoration:underline}
+#main{flex:1;display:flex;flex-direction:column;min-width:0}
+#log{flex:1;overflow:auto;padding:24px 0}
+.msg{max-width:820px;margin:0 auto 18px;padding:0 20px}
+.msg .who{font-size:12px;color:var(--mute);margin-bottom:4px}
+.msg .body{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 16px;overflow-x:auto}
+.msg.user .body{background:#e9f2ef;border-color:#cfe3dc}
+.msg pre{background:#f1f3f5;padding:10px;border-radius:6px;overflow:auto;font-size:13px}
+.msg code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px}
+details.prog{font-size:13px;color:var(--mute);margin-bottom:8px}
+details.prog div{white-space:pre-wrap}
+.files{font-size:12px;color:var(--mute);margin-top:6px}
+#bar{border-top:1px solid var(--line);background:var(--card);padding:12px}
+#bar .in{max-width:820px;margin:0 auto;display:flex;gap:8px;align-items:flex-end}
+#q{flex:1;resize:none;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font:inherit;max-height:200px}
+#bar button{padding:10px 16px;border:0;border-radius:10px;background:var(--acc);color:#fff;font:inherit;cursor:pointer}
+#bar button.sec{background:#e8ebee;color:var(--text)}
+#bar button:disabled{opacity:.5;cursor:default}
+#pend{max-width:820px;margin:0 auto 6px;font-size:12px;color:var(--mute)}
+.empty{max-width:820px;margin:15vh auto 0;text-align:center;color:var(--mute)}
+@media (max-width:700px){
+  body{flex-direction:column}
+  #side{width:auto;flex-direction:row;align-items:center;gap:8px;padding:6px 10px}
+  #side h1{margin:0;font-size:16px}
+  #side button.new{margin:0;padding:5px 10px}
+  #chats{display:none}
+  #side .foot{padding:0;margin-left:auto}
+}
+</style>
+</head>
+<body>
+<div id="side">
+  <h1>lamellar</h1>
+  <button class="new" id="newBtn">+ New chat</button>
+  <div id="chats"></div>
+  <div class="foot"><a id="memBtn">What I remember</a> · <a id="keyBtn">Set password</a></div>
+</div>
+<div id="main">
+  <div id="log"></div>
+  <div id="bar">
+    <div id="pend"></div>
+    <div class="in">
+      <button class="sec" id="fileBtn" title="Upload files">📎</button>
+      <input type="file" id="file" multiple hidden>
+      <textarea id="q" rows="1" placeholder="Describe the task. Enter to send, Shift+Enter for a new line"></textarea>
+      <button id="send">Send</button>
+    </div>
+  </div>
+</div>
+<script>
+const $ = s => document.querySelector(s);
+const store = {
+  get chats(){ try { return JSON.parse(localStorage.getItem('lam.chats') || '[]'); } catch(e){ return []; } },
+  set chats(v){ localStorage.setItem('lam.chats', JSON.stringify(v)); },
+  key(){ return localStorage.getItem('lam.key') || ''; },
+};
+let cur = null, pending = [], ctrl = null;
+
+function esc(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function md(src){
+  // Tiny markdown: escape everything first, then handle code blocks, inline code, bold, headings, lists, links (http/https only)
+  const parts = String(src).split(/```[^\n]*\n?/);
+  return parts.map((p, i) => {
+    if (i % 2) return '<pre><code>' + esc(p.replace(/\n$/, '')) + '</code></pre>';
+    let h = esc(p);
+    h = h.replace(/`([^`\n]+)`/g, '<code>$1</code>')
+         .replace(/\*\*([^*\n]+)\*\*/g, '<b>$1</b>')
+         .replace(/\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+         .replace(/^#{1,4} (.+)$/gm, '<b>$1</b>')
+         .replace(/^\s*[-*] (.+)$/gm, '• $1');
+    return h.replace(/\n/g, '<br>');
+  }).join('');
+}
+function headers(extra){
+  const h = Object.assign({'X-Lamellar-Chat-Id': cur.id}, extra || {});
+  if (store.key()) h['X-Lamellar-Key'] = store.key();   // Not using Authorization: it clashes when the site sits behind a login (Basic Auth)
+  return h;
+}
+function askKey(){
+  const k = prompt('Enter the lamellar password (the api_key in entry.json)', store.key());
+  if (k !== null) localStorage.setItem('lam.key', k.trim());
+}
+function newChat(){
+  cur = {id: 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8), title: 'New chat', msgs: []};
+  store.chats = [cur, ...store.chats]; render();
+}
+function save(){ store.chats = store.chats.map(c => c.id === cur.id ? cur : c); }
+function render(){
+  $('#chats').innerHTML = '';
+  for (const c of store.chats) {
+    const d = document.createElement('div'); d.className = 'chat' + (cur && c.id === cur.id ? ' on' : '');
+    d.innerHTML = '<span>' + esc(c.title) + '</span><b title="Remove from the list (the conversation record on the server is not deleted)">✕</b>';
+    d.querySelector('span').onclick = () => { if (!ctrl) { cur = c; render(); } };
+    d.querySelector('b').onclick = () => {
+      if (ctrl) return;
+      store.chats = store.chats.filter(x => x.id !== c.id);
+      if (cur.id === c.id) { cur = store.chats[0] || null; if (!cur) return newChat(); }
+      render();
+    };
+    $('#chats').appendChild(d);
+  }
+  const log = $('#log'); log.innerHTML = '';
+  if (!cur.msgs.length) log.innerHTML = '<div class="empty">An agent running on your own machine. Tell it what you want done; you can upload files for it to work on.</div>';
+  for (const m of cur.msgs) log.appendChild(bubble(m));
+  log.scrollTop = log.scrollHeight;
+  $('#pend').textContent = pending.length ? 'Files to send: ' + pending.join(', ') : '';
+}
+function bubble(m){
+  const d = document.createElement('div'); d.className = 'msg ' + m.role;
+  let inner = '';
+  if (m.prog && m.prog.length) inner += '<details class="prog"' + (m.done ? '' : ' open') + '><summary>Work log (' + m.prog.length + ' steps)</summary><div>' + esc(m.prog.join('\n')) + '</div></details>';
+  inner += m.role === 'user' ? esc(m.text).replace(/\n/g, '<br>') : md(m.text || (m.done ? '' : '…'));
+  if (m.files && m.files.length) inner += '<div class="files">📎 ' + esc(m.files.join(', ')) + '</div>';
+  d.innerHTML = '<div class="who">' + (m.role === 'user' ? 'You' : 'lamellar') + '</div><div class="body">' + inner + '</div>';
+  return d;
+}
+function busy(on){
+  $('#send').textContent = on ? 'Stop' : 'Send';
+  $('#send').className = on ? 'sec' : ''; $('#fileBtn').disabled = on;
+}
+
+async function send(){
+  if (ctrl) { ctrl.abort(); return; }                       // Stop: disconnect; the server kills the worker process
+  const text = $('#q').value.trim();
+  if (!text && !pending.length) return;
+  const files = pending; pending = [];
+  cur.msgs.push({role: 'user', text: text || '(process the uploaded files)', files});
+  if (cur.title === 'New chat' && text) cur.title = text.slice(0, 30);
+  const a = {role: 'assistant', text: '', prog: [], done: false}; cur.msgs.push(a);
+  $('#q').value = ''; save(); render();
+  ctrl = new AbortController(); busy(true);
+  try {
+    const r = await fetch('v1/chat/completions', {method: 'POST', signal: ctrl.signal,
+      headers: headers({'Content-Type': 'application/json'}),
+      body: JSON.stringify({model: 'lamellar', stream: true, lamellar_files: files,
+        messages: [{role: 'user', content: text || 'Please process the files I uploaded'}]})});
+    if (r.status === 401) { a.text = '❌ Password required. Click "Set password" at the bottom left and try again.'; return; }
+    if (!r.ok) { a.text = '❌ Server error ' + r.status; return; }
+    const rd = r.body.getReader(), dec = new TextDecoder(); let buf = '', raw = '';
+    for (;;) {
+      const {value, done} = await rd.read(); if (done) break;
+      buf += dec.decode(value, {stream: true});
+      let i;
+      while ((i = buf.indexOf('\n\n')) >= 0) {
+        const ev = buf.slice(0, i); buf = buf.slice(i + 2);
+        if (!ev.startsWith('data: ') || ev === 'data: [DONE]') continue;
+        try { const d = JSON.parse(ev.slice(6)).choices[0].delta; if (d.content) raw += d.content; } catch(e) {}
+      }
+      // Server format: <details> work log </details> comes first, the answer follows
+      const m = raw.match(/<details>\s*<summary>[^<]*<\/summary>([\s\S]*?)(<\/details>|$)/);
+      if (m) { a.prog = m[1].split('\n\n').map(s => s.trim()).filter(Boolean); a.text = m[2] ? raw.slice(raw.indexOf('</details>') + 10).trim() : ''; }
+      else a.text = raw;
+      const log = $('#log'); log.lastChild.replaceWith(bubble(a)); log.scrollTop = log.scrollHeight;
+    }
+  } catch(e) {
+    a.text = e.name === 'AbortError' ? '⏹ Stopped' : '❌ Cannot reach the server: ' + e.message;
+  } finally {
+    a.done = true; ctrl = null; busy(false); save(); render();
+  }
+}
+
+async function upload(fs){
+  for (const f of fs) {
+    $('#pend').textContent = 'Uploading ' + f.name + '...';
+    try {
+      const r = await fetch('v1/lamellar/upload', {method: 'POST', headers: headers({'X-Filename': encodeURIComponent(f.name)}), body: f});
+      const j = await r.json();
+      if (r.ok) pending.push(j.file); else alert(f.name + ': ' + (j.error || r.status));
+    } catch(e) { alert(f.name + ' upload failed: ' + e.message); }
+  }
+  render();
+}
+
+async function local(cmd){
+  if (ctrl) return;
+  try {
+    const r = await fetch('v1/chat/completions', {method: 'POST', headers: headers({'Content-Type': 'application/json'}),
+      body: JSON.stringify({model: 'lamellar', stream: false, messages: [{role: 'user', content: cmd}]})});
+    if (r.status === 401) return alert('Password required; click "Set password".');
+    const j = await r.json(); cur.msgs.push({role: 'assistant', text: j.choices[0].message.content, done: true}); save(); render();
+  } catch(e) { alert('Cannot reach the server: ' + e.message); }
+}
+
+$('#send').onclick = send;
+$('#q').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); send(); } });
+$('#q').addEventListener('input', e => { e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; });
+$('#fileBtn').onclick = () => $('#file').click();
+$('#file').onchange = e => { upload([...e.target.files]); e.target.value = ''; };
+$('#newBtn').onclick = () => { if (!ctrl) newChat(); };
+$('#memBtn').onclick = () => local('/memory');
+$('#keyBtn').onclick = askKey;
+cur = store.chats[0] || null; if (!cur) newChat(); else render();
+</script>
+</body>
+</html>

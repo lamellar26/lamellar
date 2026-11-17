@@ -58,7 +58,7 @@ Derived backwards from the places the first pack (example-pack) actually uses; n
 - `before_task(task, ctx) -> str|None`  before the job starts; the returned text is appended to the task
 - `before_tool(name, args, ctx) -> (action, info)|None`  before a tool runs; action = allow / deny / ask / rewrite
 - `before_delivery(answer, ctx) -> str|None`  before delivery; returning text means the work is not accepted and the text is bounced back to the model to redo (shares the bounce limit with the requirement store)
-- `after_delivery(answer, ctx, checks) -> None`  after delivery
+- `after_delivery(answer, ctx, checks) -> None`  after delivery; ctx then also has task, messages (the whole exchange incl. tool results) and tools_used
 - `on_correction(text, ctx) -> None`  when the user corrects something
 - `nightly(ctx) -> None`  every night, run by `lamellar nightly` (put that in cron or a scheduled task)
 

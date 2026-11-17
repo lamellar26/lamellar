@@ -88,6 +88,7 @@ def run(cfg, task, cwd=None, session=''):
         emit('done', **d)                                                # deliver first; the user does not wait for what follows
         if ok:
             _session.save(cfg, session_id, messages + [{'role': 'assistant', 'content': answer}])
+            ctx.update(task=task, messages=messages, tools_used=n_tools)   # packs that learn from the exchange (e.g. kal) read these
             reg.call('after_delivery', answer, ctx, checks)
             if mem is not None:                                        # review after answering: done is already emitted, the user does not wait
                 from ..memory import review as _rv

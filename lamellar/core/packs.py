@@ -12,7 +12,7 @@ Hooks (derived from where the first pack actually used them):
   before_task(task, ctx) -> str|None      before the task starts; returned text is appended to the task
   before_tool(name, args, ctx) -> (action, info)|None   before running a tool; same return value as Guard.check
   before_delivery(answer, ctx) -> str|None              before delivery; returning text = reject, and the text is sent back to the model to redo
-  after_delivery(answer, ctx, checks) -> None           after delivery
+  after_delivery(answer, ctx, checks) -> None           after delivery; ctx then also has task, messages (the whole exchange incl. tool results) and tools_used
   on_correction(text, ctx) -> dict|None                 when the user corrects
   nightly(ctx) -> None                                  nightly (`lamellar nightly`, e.g. from cron)
 

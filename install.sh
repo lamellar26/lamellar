@@ -14,6 +14,7 @@
 #   LAMELLAR_CTX    force the context length in tokens        (default: picked with the model)
 #   LAMELLAR_PORT   web entry port                            (default: 8102)
 #   LAMELLAR_SRC    code source: a .tar.gz URL or a local directory
+#   LAMELLAR_KAL    1 | 0: also install the kal knowledge plate   (default: ask; yes)
 #   LAMELLAR_YES=1  never ask, take the defaults
 #   LAMELLAR_NO_BROWSER=1  do not open a browser at the end
 #   LAMELLAR_NO_SMOKE=1    doctor skips the one-question model test (does not load the model)
@@ -23,6 +24,7 @@ set -eu
 HOME_DIR="${LAMELLAR_HOME:-$HOME/.lamellar}"
 SRC="${LAMELLAR_SRC:-https://lamellar.org/dl/main.tar.gz}"   # redirects to the GitHub tarball
 SRC_FALLBACK="https://github.com/lamellar26/lamellar/archive/refs/heads/main.tar.gz"
+KAL_SRC="${LAMELLAR_KAL_SRC:-https://github.com/lamellar26/lamellar-pack-kal}"
 PORT="${LAMELLAR_PORT:-8102}"
 BIN_DIR="$HOME/.local/bin"
 OS="$(uname -s)"
@@ -285,6 +287,18 @@ chmod +x "$BIN_DIR/lamellar"
 case ":$PATH:" in *":$BIN_DIR:"*) ;; *) warn "$BIN_DIR is not on your PATH. Add this to your shell profile: export PATH=\"\$HOME/.local/bin:\$PATH\"" ;; esac
 fi
 mkdir -p "$HOME_DIR/logs"
+
+# ---------- knowledge plate (optional) ----------
+KAL="${LAMELLAR_KAL:-}"
+if [ -z "$KAL" ]; then
+  case "$(ask 'Also install the kal knowledge plate (your own folders are searched before each task)? y/n' y)" in [Nn]*) KAL=0 ;; *) KAL=1 ;; esac
+fi
+if [ "$KAL" = 1 ]; then
+  if ! have git; then warn "git not found, so kal was skipped. Later: lamellar pack install $KAL_SRC"
+  elif [ -f "$HOME_DIR/packs/kal/pack.json" ]; then say "kal is already installed (update with: lamellar pack update kal)"
+  elif $LAUNCH pack install "$KAL_SRC"; then say "kal installed. Add a folder with: lamellar kal add <folder>"
+  else warn "kal did not install; the rest works. Later: lamellar pack install $KAL_SRC"; fi
+fi
 
 # ---------- 6. start + Open WebUI + browser ----------
 $LAUNCH restart   # restart, so a re-run picks up the new code

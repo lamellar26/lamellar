@@ -56,6 +56,13 @@ Same model, same machine. The difference is what happens around the model:
 - **Failures go back, not to you.** A failing answer is returned with the reason and rewritten, up to 3 times. If it still fails, it is delivered with a note saying which rule was not met.
 - **Proof.** Each rule keeps a record: passed first time, fixed after a bounce, still failing.
 
+## Plates: each one makes a small model stronger
+
+Lamellar armor is made of small plates laced together. Each plate here is one way to make a small local model more capable, and you add only the plates you need (`lamellar pack install <git-url>`):
+
+- **Rules** (built in): the checks above. The model follows your rules because code checks every answer against them.
+- **Knowledge** (the `kal` pack): your own folders (md, txt, docx) become a local library. Before a task starts, the relevant passages are added to it, each with a reference to its source. At night a local model digests the library into short notes. Every quote in a note is checked by code against the original, word for word. Tested on 30 questions about one book: a 9B model answered 12.5 of 30 without the plate and 28.5 of 30 with it, and answered faster. Unrelated questions had nothing added.
+
 ## What it is
 
 - **An agent that runs on your own machine.** It talks to a local model through [Ollama](https://ollama.com), runs shell commands and edits files in its working directory. Nothing leaves your computer.

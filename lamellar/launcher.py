@@ -1,4 +1,4 @@
-"""The `lamellar` command for pip installs: setup|start|stop|restart|status|logs|doctor|run|open.
+"""The `lamellar` command for pip installs: setup|start|stop|restart|status|logs|doctor|run|open|pack.
 
 Same commands as the launcher that install.sh writes, but it runs the code from the installed package
 instead of ~/.lamellar/app. `lamellar setup` runs the one-line installer in pip mode (Ollama, model,
@@ -8,7 +8,7 @@ import json, os, shutil, signal, subprocess, sys, tempfile, time, urllib.request
 H = os.path.expanduser(os.environ.get('LAMELLAR_HOME') or '~/.lamellar')
 INSTALLER = 'https://lamellar.org/install.sh'
 INSTALLER_FALLBACK = 'https://raw.githubusercontent.com/lamellar26/lamellar/main/install.sh'
-USAGE = 'usage: lamellar setup|start|stop|restart|status|logs [n]|doctor [--no-smoke]|run "task"|open'
+USAGE = 'usage: lamellar setup|start|stop|restart|status|logs [n]|doctor [--no-smoke]|run "task"|open|pack install|list|enable|disable|update|remove'
 
 
 def _json(name):
@@ -106,6 +106,7 @@ def main(argv=None):
             with open(os.path.join(H, 'logs', 'entry.log'), encoding='utf-8', errors='replace') as f: print(''.join(f.readlines()[-n:]), end='')
         except OSError: print('no log yet')
         return 0
+    if cmd == 'pack': return subprocess.call([sys.executable, '-m', 'lamellar.packcmd', '--home', H] + a)
     if cmd == 'doctor': return subprocess.call([sys.executable, '-m', 'lamellar.doctor', '--home', H] + a)
     if cmd == 'run':
         _need_setup()

@@ -273,9 +273,10 @@ case "${1:-help}" in
   status)  if up "http://127.0.0.1:$PORT/health"; then echo "running on http://localhost:$PORT/"; else echo "not running"; exit 1; fi ;;
   logs)    tail -n "${2:-50}" "$H/logs/entry.log" ;;
   doctor)  shift; cd "$H/app" && exec "$PY" -m lamellar.doctor --home "$H" "$@" ;;
+  pack)    shift; cd "$H/app" && exec "$PY" -m lamellar.packcmd --home "$H" "$@" ;;
   run)     shift; exec "$PY" "$H/app/cli.py" --config "$H/worker.json" "$@" ;;
   open)    url="http://localhost:$PORT/"; (command -v xdg-open >/dev/null && xdg-open "$url") || (command -v open >/dev/null && open "$url") || echo "$url" ;;
-  *) echo "usage: lamellar start|stop|restart|status|logs [n]|doctor [--no-smoke]|run \"task\"|open"; [ "${1:-help}" = help ] ;;
+  *) echo "usage: lamellar start|stop|restart|status|logs [n]|doctor [--no-smoke]|run \"task\"|open|pack install|list|enable|disable|update|remove"; [ "${1:-help}" = help ] ;;
 esac
 EOF
 chmod +x "$BIN_DIR/lamellar"

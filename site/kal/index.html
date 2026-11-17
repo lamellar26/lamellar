@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>kal: the knowledge plate for lamellar</title>
+<meta name="description" content="kal turns your own folders into an offline library. Before each task, the relevant passages are added, each with a reference to its source.">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta property="og:title" content="kal: the knowledge plate for lamellar">
+<meta property="og:description" content="Your own folders become an offline library, searched before each task.">
+<meta property="og:image" content="https://lamellar.org/social.png">
+<meta property="og:url" content="https://lamellar.org/kal/">
+<meta name="twitter:card" content="summary_large_image">
+<style>
+  :root { --fg:#1d1f21; --muted:#5f6368; --bg:#fbfaf7; --card:#fff; --line:#e4e1d9; --accent:#8a5a1e; --code:#f3f1ec; }
+  @media (prefers-color-scheme: dark) { :root { --fg:#e8e6e1; --muted:#a3a09a; --bg:#151515; --card:#1d1d1d; --line:#333; --accent:#d9a25b; --code:#242424; } }
+  * { box-sizing: border-box; }
+  body { margin:0; font:17px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; color:var(--fg); background:var(--bg); }
+  main { max-width: 760px; margin: 0 auto; padding: 56px 22px 80px; }
+  .sr { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
+  .logo { display:block; width: 220px; max-width: 60%; height:auto; margin: 0 0 18px; }
+  h1 { font-size: 2.4rem; margin: 0 0 4px; letter-spacing: -0.02em; }
+  h2 { font-size: 1.25rem; margin: 44px 0 10px; }
+  .tag { color: var(--muted); font-size: 1.15rem; margin: 0 0 28px; }
+  .badge { display:inline-block; font-size:.8rem; border:1px solid var(--line); border-radius:99px; padding:1px 10px; color:var(--muted); margin-left:8px; vertical-align: middle; }
+  pre, code { font-family: ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size: .92em; }
+  code { background: var(--code); padding: 1px 5px; border-radius: 4px; }
+  .install { position:relative; background: var(--card); border:1px solid var(--line); border-radius: 10px; padding: 16px 18px; margin: 10px 0 6px; overflow-x:auto; }
+  .install pre { margin:0; white-space: pre; }
+  .install button { position:absolute; top:10px; right:10px; font:inherit; font-size:.8rem; padding:3px 10px; border:1px solid var(--line); background:var(--bg); color:var(--fg); border-radius:6px; cursor:pointer; }
+  .small { color: var(--muted); font-size: .92rem; }
+  ul { padding-left: 1.2em; } li { margin: 4px 0; }
+  table { border-collapse: collapse; width: 100%; font-size: .95rem; }
+  th, td { text-align:left; padding: 7px 10px; border-bottom: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 600; }
+  a { color: var(--accent); }
+  figure.wide { width: min(1120px, calc(100vw - 28px)); margin: 26px 0 8px 50%; transform: translateX(-50%); }
+  figure.wide img { display:block; width:100%; height:auto; border:1px solid var(--line); border-radius: 12px; background:#fff; }
+  figure.wide figcaption { max-width: 716px; margin: 12px auto 0; color: var(--muted); font-size: .95rem; }
+  .nav { font-size:.95rem; margin:0 0 26px; }
+  .nav img { width:34px; height:auto; vertical-align:middle; margin-right:6px; }
+  footer { margin-top: 56px; padding-top: 18px; border-top: 1px solid var(--line); color: var(--muted); font-size: .9rem; }
+</style>
+</head>
+<body>
+<main>
+  <p class="nav"><a href="/"><img src="/logo-mark.png" alt="">lamellar</a> &rsaquo; kal</p>
+  <h1>kal <span class="badge">plate</span></h1>
+  <p class="tag">The knowledge plate. Your own folders become a library on your machine. Before each task, the passages that matter are added to it, each with a reference to where it came from.</p>
+
+  <div class="install"><pre id="cmd">lamellar pack install https://github.com/lamellar26/lamellar-pack-kal
+lamellar kal add ~/Documents/handbook
+lamellar run "who approves leave requests?"</pre><button onclick="navigator.clipboard.writeText(document.getElementById('cmd').textContent);this.textContent='copied'">copy</button></div>
+  <p class="small">Needs lamellar 0.2.2 or later and git. The <a href="/install.sh">installer</a> asks whether to add kal (say yes, or set <code>LAMELLAR_KAL=1</code>). Works offline, Python standard library only.</p>
+
+  <h2>What it does</h2>
+  <ul>
+    <li><b>Your folders become a library.</b> <code>lamellar kal add &lt;folder&gt;</code> splits md, txt and docx files into passages and indexes them in SQLite under <code>~/.lamellar/kal/</code>. They are searchable at once. Running it again skips files that have not changed.</li>
+    <li><b>Relevant passages are added before every task.</b> Each passage carries a <code>[ref]</code> to its source, and the total is capped (3,000 characters by default). Unrelated tasks get nothing added.</li>
+    <li><b>The model can look things up while it works.</b> Two tools, <code>kal_search</code> and <code>kal_read(ref)</code>, let it search the library and open a passage in full.</li>
+    <li><b>Nothing is rewritten by a model.</b> What the model sees is your original text. Earlier versions had a model write notes from the documents; tests showed the notes added nothing, so they were removed in 0.3.0.</li>
+  </ul>
+
+  <h2>Measured</h2>
+  <p><b>Documents.</b> 30 fact questions about one book (16 chapters), 9B model, two runs each.</p>
+  <table>
+    <tr><th>Setup</th><th>Right, of 30</th></tr>
+    <tr><td>No plate</td><td>12.5</td></tr>
+    <tr><td>kal (original passages)</td><td>28.5</td></tr>
+    <tr><td>Model-written notes plus passages</td><td>28.5, no better</td></tr>
+  </table>
+  <p class="small">With the plate, answers came in about 3 s instead of 8&ndash;20 s, and none timed out. 10 unrelated questions had nothing added.</p>
+
+  <p><b>Conversations.</b> 20 real conversations replayed, then one follow-up question each, asked in a new session. 9B model, two runs.</p>
+  <table>
+    <tr><th>Setup</th><th>Right, of 20</th></tr>
+    <tr><td>No conversation library</td><td>1 and 3</td></tr>
+    <tr><td>Conversation passages (default)</td><td>11 and 14</td></tr>
+    <tr><td>Passages plus model-written notes</td><td>14 and 14, but 3 of 24 notes had invented details</td></tr>
+  </table>
+  <p class="small">The rerank threshold was tuned on this same set, so a fresh set is needed for a clean number.</p>
+
+  <h2>Conversation library <span class="badge">off by default</span></h2>
+  <p>Set <code>"chat_write": true</code> and each user gets a private library. One user never sees another user's library.</p>
+  <ul>
+    <li><b>What is saved:</b> what the user said and what the tools returned, after the answer is delivered. Only when a tool was used or the user stated facts; pure chat is skipped.</li>
+    <li><b>What is never saved:</b> the assistant's own words. Passwords, keys, ID numbers, phone numbers, emails and amounts are masked before storing.</li>
+    <li><b>How it is searched:</b> each candidate passage is scored by the model and kept only at 3 of 10 or above, so unrelated questions do not pull in long tool output.</li>
+    <li><b>Plain files are the truth:</b> markdown under <code>~/.lamellar/kal/&lt;lib&gt;/sources/</code>. <code>lamellar kal rebuild</code> rebuilds the database from it.</li>
+  </ul>
+
+  <h2>Commands</h2>
+<div class="install"><pre>lamellar kal add &lt;folder&gt; [--lib NAME]   index a folder (or one file)
+lamellar kal search "&lt;query&gt;"            search the libraries
+lamellar kal read &lt;ref&gt;                  show one passage in full
+lamellar kal context "&lt;task&gt;"           show what would be added to a task
+lamellar kal status [--lib NAME]         files and passages
+lamellar kal chats                       conversation libraries
+lamellar kal rebuild --lib chat-...      rebuild from markdown</pre></div>
+
+  <h2>Settings</h2>
+  <p class="small">In <code>~/.lamellar/worker.json</code>, under the key <code>kal</code>.</p>
+  <table>
+    <tr><th>Key</th><th>Default</th><th>Meaning</th></tr>
+    <tr><td><code>libs</code></td><td>["default"]</td><td>libraries used when answering</td></tr>
+    <tr><td><code>max_chars</code></td><td>3000</td><td>cap on added text</td></tr>
+    <tr><td><code>min_rel</code>, <code>rel_top</code></td><td>0.05, 0.5</td><td>relevance floor; share of the best hit to keep</td></tr>
+    <tr><td><code>rerank_model</code></td><td>""</td><td>optional reranker for all libraries</td></tr>
+    <tr><td><code>chat_write</code></td><td>false</td><td>conversation library on or off</td></tr>
+    <tr><td><code>chat_rerank</code></td><td>true</td><td>rerank conversation passages</td></tr>
+  </table>
+  <p class="small">PDF is not supported in this version.</p>
+
+  <h2>Source</h2>
+  <p><a href="https://github.com/lamellar26/lamellar-pack-kal">github.com/lamellar26/lamellar-pack-kal</a>. Apache-2.0. Provided as is, with no guarantee of support.</p>
+
+  <footer><a href="/">lamellar</a> &middot; Copyright 2026 The lamellar Authors</footer>
+</main>
+</body>
+</html>

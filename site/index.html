@@ -108,13 +108,19 @@ lamellar setup</pre></div>
   </table>
   <p class="small">Provisional; it will be replaced by measured results. Apple Silicon is picked by unified memory. Override with <code>... | LAMELLAR_MODEL=qwen3.5:9b sh</code>.</p>
 
+  <h2>Plates</h2>
+  <p>Extra abilities come as plates you add one at a time with <code>lamellar pack install</code>.</p>
+  <ul>
+    <li><a href="/kal/"><b>kal</b></a>, the knowledge plate: your own folders become an offline library, and the relevant passages are added before each task. On 30 questions about one book, a 9B model went from 12.5 to 28.5 right.</li>
+  </ul>
+
   <h2>After installing</h2>
 <div class="install"><pre>lamellar start | stop | status | logs
 lamellar doctor
 lamellar run "summarise the CSV files in this folder"</pre></div>
 
   <h2>Source</h2>
-  <p><a href="https://github.com/lamellar26/lamellar">github.com/lamellar26/lamellar</a>. Apache-2.0. Provided as is, with no guarantee of support.</p>
+  <p><a href="https://github.com/lamellar26/lamellar">github.com/lamellar26/lamellar</a>. Plates: <a href="https://github.com/lamellar26/lamellar-pack-kal">lamellar-pack-kal</a>. Apache-2.0. Provided as is, with no guarantee of support.</p>
 
   <footer>lamellar &middot; Copyright 2026 The lamellar Authors</footer>
 </main>

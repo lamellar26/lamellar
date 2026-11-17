@@ -14,11 +14,15 @@ Hooks (derived from where the first pack actually used them):
   before_delivery(answer, ctx) -> str|None              before delivery; returning text = reject, and the text is sent back to the model to redo
   after_delivery(answer, ctx, checks) -> None           after delivery
   on_correction(text, ctx) -> dict|None                 when the user corrects
-  nightly(ctx) -> None                                  nightly
+  nightly(ctx) -> None                                  nightly (`lamellar nightly`, e.g. from cron)
+
+Commands: api.add_command(name, fn) makes `lamellar <name> ...` call fn(args, cfg).
+A pack whose pack.py raises while loading is skipped (stderr + reg.errors); the job still runs.
 """
 import importlib.util, json, os, re, sys
 from .. import __version__
 
+CORE_COMMANDS = {'setup', 'start', 'stop', 'restart', 'status', 'logs', 'doctor', 'run', 'open', 'pack', 'nightly', 'help', 'version'}
 HOOKS = ('before_task', 'before_tool', 'before_delivery', 'after_delivery', 'on_correction', 'nightly')
 
 
@@ -35,6 +39,10 @@ class Api:
         from . import tools; tools.register(spec, fn)
     def add_guard_rule(self, rule): self._r.guard_rules.append(rule)
     def add_rule_doc(self, type_name, doc): self._r.rule_docs[type_name] = doc     # type description used by correction capture
+    def add_command(self, name, fn, help=''):
+        """`lamellar <name> ...` runs fn(args: list[str], cfg) -> int exit code. Core command names cannot be taken."""
+        if name in CORE_COMMANDS: raise ValueError(f'{name} is a core command')
+        self._r.commands[name] = (fn, help)
     def on(self, hook, fn):
         if hook not in HOOKS: raise ValueError(f'No such hook: {hook}')
         self._r.hooks[hook].append(fn)
@@ -43,6 +51,7 @@ class Api:
 class Registry:
     def __init__(self):
         self.packs, self.skills, self.guard_rules, self.rule_docs = [], [], [], {}
+        self.commands, self.errors = {}, []      # errors: [(pack, text)] from register(); a broken pack is skipped, the job goes on
         self.hooks = {h: [] for h in HOOKS}
 
     def call(self, hook, *a):
@@ -88,7 +97,11 @@ def load(cfg):
         if os.path.isfile(py):
             modname = 'lamellar_pack_' + re.sub(r'\W', '_', name)
             spec = importlib.util.spec_from_file_location(modname, py, submodule_search_locations=[pdir])
-            mod = importlib.util.module_from_spec(spec); sys.modules[modname] = mod; spec.loader.exec_module(mod)
-            if hasattr(mod, 'register'): mod.register(Api(reg, pdir, cfg))
+            try:
+                mod = importlib.util.module_from_spec(spec); sys.modules[modname] = mod; spec.loader.exec_module(mod)
+                if hasattr(mod, 'register'): mod.register(Api(reg, pdir, cfg))
+            except Exception as e:
+                err = f'{type(e).__name__}: {e}'; reg.errors.append((name, err))
+                print(f'[lamellar] pack {name} failed to load, skipped: {err}', file=sys.stderr); continue
         reg.packs.append({'name': meta.get('name', name), 'version': meta.get('version', ''), 'dir': pdir})
     return reg

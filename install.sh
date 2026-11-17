@@ -274,9 +274,11 @@ case "${1:-help}" in
   logs)    tail -n "${2:-50}" "$H/logs/entry.log" ;;
   doctor)  shift; cd "$H/app" && exec "$PY" -m lamellar.doctor --home "$H" "$@" ;;
   pack)    shift; cd "$H/app" && exec "$PY" -m lamellar.packcmd --home "$H" "$@" ;;
+  nightly) cd "$H/app" && exec "$PY" -m lamellar.packcmd --home "$H" nightly ;;
   run)     shift; exec "$PY" "$H/app/cli.py" --config "$H/worker.json" "$@" ;;
   open)    url="http://localhost:$PORT/"; (command -v xdg-open >/dev/null && xdg-open "$url") || (command -v open >/dev/null && open "$url") || echo "$url" ;;
-  *) echo "usage: lamellar start|stop|restart|status|logs [n]|doctor [--no-smoke]|run \"task\"|open|pack install|list|enable|disable|update|remove"; [ "${1:-help}" = help ] ;;
+  help|-h|--help) echo "usage: lamellar start|stop|restart|status|logs [n]|doctor [--no-smoke]|run \"task\"|open|nightly|pack install|list|enable|disable|update|remove|<pack command>" ;;
+  *) cd "$H/app" && exec "$PY" -m lamellar.packcmd --home "$H" call "$@" ;;
 esac
 EOF
 chmod +x "$BIN_DIR/lamellar"

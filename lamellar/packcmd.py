@@ -56,8 +56,9 @@ def _set_enabled(home, name, on):
 def _trial_load(home, name):
     """Load just this pack once; returns None if fine, else the error text."""
     cfg = dict(_read(home)); cfg['packs'] = [name]; cfg['packs_dir'] = [_pdir(home)] + list(cfg.get('packs_dir') or [])
-    try: packs_mod.load(cfg); return None
+    try: reg = packs_mod.load(cfg)
     except Exception as e: return f'{type(e).__name__}: {e}'
+    return '; '.join(e for _, e in reg.errors) or None
 
 
 def install(home, src, name=None, enable=True):
@@ -132,17 +133,43 @@ def remove(home, name):
     return 0
 
 
+def _full_cfg(home):
+    from .core import config
+    p = _cfg_path(home)
+    return config.load(p if os.path.isfile(p) else None)
+
+
+def call(home, cmd, args):
+    """`lamellar <cmd>` that is not a core command: look it up among the enabled packs' commands."""
+    try: cfg = _full_cfg(home); reg = packs_mod.load(cfg)
+    except Exception as e: print(f'cannot load config/packs: {e}'); return 2
+    if cmd not in reg.commands:
+        print(f'unknown command: {cmd}' + (f' (pack commands: {", ".join(sorted(reg.commands))})' if reg.commands else '')); return 1
+    return reg.commands[cmd][0](list(args), cfg) or 0
+
+
+def nightly(home):
+    """Run every enabled pack's nightly hook (meant for cron). A failing hook is logged and the others still run."""
+    try: cfg = _full_cfg(home); reg = packs_mod.load(cfg)
+    except Exception as e: print(f'cannot load config/packs: {e}'); return 2
+    n = len(reg.hooks['nightly']); reg.call('nightly', {'cwd': os.getcwd(), 'cfg': cfg}); print(f'nightly: ran {n} hook(s)'); return 0
+
+
 def main(argv=None):
+    argv = list(sys.argv[1:] if argv is None else argv)
+    if len(argv) >= 3 and argv[0] == '--home' and argv[2] == 'call':      # passthrough: argparse must not eat the pack's own flags
+        return call(os.path.expanduser(argv[1]), argv[3] if len(argv) > 3 else '', argv[4:])
     ap = argparse.ArgumentParser(prog='lamellar pack')
     ap.add_argument('--home', default=os.path.expanduser(os.environ.get('LAMELLAR_HOME') or '~/.lamellar'))
     sp = ap.add_subparsers(dest='cmd')
     i = sp.add_parser('install'); i.add_argument('src'); i.add_argument('--name'); i.add_argument('--no-enable', action='store_true')
-    sp.add_parser('list')
+    sp.add_parser('list'); sp.add_parser('nightly')
     for c in ('enable', 'disable', 'update', 'remove'): sp.add_parser(c).add_argument('name')
     a = ap.parse_args(argv)
     home = os.path.expanduser(a.home)
     if a.cmd == 'install': return install(home, a.src, a.name, not a.no_enable)
     if a.cmd == 'list' or a.cmd is None: return listing(home)
+    if a.cmd == 'nightly': return nightly(home)
     return {'enable': enable, 'disable': disable, 'update': update, 'remove': remove}[a.cmd](home, a.name)
 
 

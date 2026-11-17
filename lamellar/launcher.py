@@ -8,7 +8,7 @@ import json, os, shutil, signal, subprocess, sys, tempfile, time, urllib.request
 H = os.path.expanduser(os.environ.get('LAMELLAR_HOME') or '~/.lamellar')
 INSTALLER = 'https://lamellar.org/install.sh'
 INSTALLER_FALLBACK = 'https://raw.githubusercontent.com/lamellar26/lamellar/main/install.sh'
-USAGE = 'usage: lamellar setup|start|stop|restart|status|logs [n]|doctor [--no-smoke]|run "task"|open|pack install|list|enable|disable|update|remove'
+USAGE = 'usage: lamellar setup|start|stop|restart|status|logs [n]|doctor [--no-smoke]|run "task"|open|nightly|pack install|list|enable|disable|update|remove|<pack command>'
 
 
 def _json(name):
@@ -117,6 +117,9 @@ def main(argv=None):
         return 0
     if cmd in ('--version', 'version'):
         from lamellar import __version__; print(f'lamellar {__version__}'); return 0
+    if cmd == 'nightly': return subprocess.call([sys.executable, '-m', 'lamellar.packcmd', '--home', H, 'nightly'])
+    if cmd not in ('help', '-h', '--help') and os.path.isfile(os.path.join(H, 'worker.json')):   # a command added by a pack
+        return subprocess.call([sys.executable, '-m', 'lamellar.packcmd', '--home', H, 'call', cmd] + a)
     print(USAGE); return 0 if cmd in ('help', '-h', '--help') else 1
 
 

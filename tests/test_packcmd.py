@@ -87,6 +87,39 @@ class PackCmd(unittest.TestCase):
         self.assertEqual(packcmd._name_from('git@github.com:x/kal.git'), 'kal')
         self.assertEqual(packcmd._name_from('/tmp/foo/'), 'foo')
 
+    def test_pack_command_and_nightly(self):
+        src = os.path.join(self.t, 'cmdpack')
+        make_pack(src, 'cmdpack', body="import os\ndef register(api):\n"
+                  "    api.add_command('hello', lambda args, cfg: print('hi', *args) or 7)\n"
+                  "    api.on('nightly', lambda ctx: open(os.path.join(ctx['cfg']['state_dir'], 'ran'), 'w').close())\n")
+        with open(os.path.join(self.home, 'worker.json'), 'w') as f: json.dump({'model': 'm', 'context': 8192, 'packs': [], 'state_dir': self.home}, f)
+        self.assertEqual(self.run_cmd('install', src)[0], 0)
+        rc, out = self.run_cmd('call', 'hello', '--x', 'y'); self.assertEqual(rc, 7); self.assertIn('hi --x y', out)
+        rc, out = self.run_cmd('call', 'nope'); self.assertEqual(rc, 1); self.assertIn('hello', out)
+        self.assertEqual(self.run_cmd('nightly')[0], 0); self.assertTrue(os.path.exists(os.path.join(self.home, 'ran')))
+
+    def test_core_command_name_refused(self):
+        src = os.path.join(self.t, 'grab'); make_pack(src, 'grab', body="def register(api): api.add_command('start', lambda a, c: 0)\n")
+        rc, out = self.run_cmd('install', src); self.assertEqual(rc, 1); self.assertIn('core command', out)
+
+
+class BrokenPackDoesNotKillJob(unittest.TestCase):
+    def test_register_and_hook_errors(self):
+        from lamellar.core import config, events, loop, model
+        t = tempfile.mkdtemp()
+        make_pack(os.path.join(t, 'bad'), 'bad', body='def register(api): raise RuntimeError("boom")\n')
+        make_pack(os.path.join(t, 'hookbad'), 'hookbad', body="def register(api):\n    api.on('before_task', lambda task, ctx: 1/0)\n"
+                  "    api.on('after_delivery', lambda a, c, k: 1/0)\n")
+        cfg = config.load(model='m', context=8192, packs=['bad', 'hookbad'], packs_dir=[t])
+        orig = model.chat; err = io.StringIO()
+        model.chat = lambda c, m, tl=None: {'content': 'done', 'tool_calls': [], 'finish': 'stop', 'usage': {'prompt': 1, 'completion': 1}}
+        events.set_sink(lambda e: None)
+        try:
+            with contextlib.redirect_stderr(err): d = loop.run(cfg, 'task', t)
+        finally: model.chat = orig; events.set_sink(None); shutil.rmtree(t)
+        self.assertTrue(d['ok']); self.assertEqual(d['answer'], 'done')
+        self.assertIn('pack bad failed to load', err.getvalue()); self.assertIn('before_task error', err.getvalue())
+
 
 if __name__ == '__main__':
     unittest.main()

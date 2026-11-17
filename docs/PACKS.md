@@ -48,6 +48,7 @@ lamellar pack enable|disable|update|remove <name>
 - `api.add_rule_doc(type_name, description)`: used by correction capture; the model relies on this description to pick a type and fill in params
 - `api.add_tool(spec, fn)`: add a tool. `fn(ctx, **params) -> (ok, text)`
 - `api.add_guard_rule(rule)`: add an interception rule that runs before a tool
+- `api.add_command(name, fn, help='')`: adds `lamellar <name> ...`; `fn(args, cfg) -> exit code`. Core command names cannot be taken.
 - `api.on(hook_name, fn)`: hooks, see below
 
 ## Hooks
@@ -59,8 +60,8 @@ Derived backwards from the places the first pack (example-pack) actually uses; n
 - `before_delivery(answer, ctx) -> str|None`  before delivery; returning text means the work is not accepted and the text is bounced back to the model to redo (shares the bounce limit with the requirement store)
 - `after_delivery(answer, ctx, checks) -> None`  after delivery
 - `on_correction(text, ctx) -> None`  when the user corrects something
-- `nightly(ctx) -> None`  every night
+- `nightly(ctx) -> None`  every night, run by `lamellar nightly` (put that in cron or a scheduled task)
 
 `ctx` is a dict: `cwd` (working directory), `cfg` (config), `session`, `armor` (requirement store). A pack may put its own things in `ctx` (for example tool results kept for the delivery check).
 
-A hook error does not kill the job: the error is printed to stderr and treated as no response.
+A hook error does not kill the job: the error is printed to stderr and treated as no response. A pack whose `pack.py` raises while loading is skipped the same way (and `lamellar pack install` will not enable it).

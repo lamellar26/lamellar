@@ -15,6 +15,21 @@ Config file (JSON):
 - Disable: remove it from `packs`.
 - Pack lookup order: the directories listed in `packs_dir`, then the core repo's `packs/`, then `~/.lamellar/packs/`. Keep private packs outside the core repo.
 
+## Installing with the `lamellar pack` command
+
+```
+lamellar pack install <git-url-or-path> [--name N] [--no-enable]
+lamellar pack list
+lamellar pack enable|disable|update|remove <name>
+```
+
+- `install` clones the pack (depth 1) into `~/.lamellar/packs/<name>`, checks `pack.json` and `requires_core`, loads it once, and only then adds it to `packs` in `worker.json`. The name comes from the repo name, with a leading `lamellar-pack-` or `lamellar-` dropped.
+- A pack that fails to load stays on disk but is not enabled. Something without a `pack.json`, or one that needs a newer core, is not installed at all.
+- `update` runs `git pull --ff-only`. If the pack no longer loads afterwards, it is disabled.
+- `remove` disables the pack and deletes it, but only from `~/.lamellar/packs`. Packs in your own `packs_dir` are only disabled.
+- No restart is needed. Every job starts a new worker that reads `worker.json`.
+- A pack is code that runs inside lamellar. Only install packs from sources you trust.
+
 ## Pack layout
 
 ```

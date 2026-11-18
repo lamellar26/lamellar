@@ -23,7 +23,7 @@ import importlib.util, json, os, re, sys
 from .. import __version__
 
 CORE_COMMANDS = {'setup', 'start', 'stop', 'restart', 'status', 'logs', 'doctor', 'run', 'open', 'pack', 'nightly', 'help', 'version'}
-HOOKS = ('before_task', 'before_tool', 'before_delivery', 'after_delivery', 'on_correction', 'nightly')
+HOOKS = ('before_task', 'before_tool', 'render_answer', 'before_delivery', 'after_delivery', 'on_correction', 'nightly')
 
 
 def _ver(s): return tuple(int(x) for x in re.findall(r'\d+', s)[:3])
@@ -63,6 +63,16 @@ class Registry:
             except Exception as e:
                 print(f'[lamellar] pack hook {hook} error: {type(e).__name__}: {e}', file=sys.stderr)
         return out
+
+    def chain(self, hook, value, *a):
+        """Pass value through every fn of the hook in turn; a fn returning a str replaces it (render_answer)."""
+        for fn in self.hooks[hook]:
+            try:
+                r = fn(value, *a)
+                if isinstance(r, str): value = r
+            except Exception as e:
+                print(f'[lamellar] pack hook {hook} error: {type(e).__name__}: {e}', file=sys.stderr)
+        return value
 
     def skills_for(self, task):
         out = []

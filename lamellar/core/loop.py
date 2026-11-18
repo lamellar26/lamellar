@@ -127,7 +127,8 @@ def run(cfg, task, cwd=None, session=''):
                              {'role': 'user', 'content': 'Your output was cut off by the length limit. Continue exactly from where you stopped; do not repeat what you already wrote.'}]
                 known_len = len(messages) - 1
                 continue
-            answer = ''.join(answer_parts).strip()
+            ctx['messages'] = messages                                 # delivery-time packs can see the exchange so far (tool results incl.)
+            answer = reg.chain('render_answer', ''.join(answer_parts).strip(), ctx)   # e.g. maths fills {{c3}} with the computed value
             fb, note, had_checks = [], '', checks is not None
             checks = None
             if armor.rules:                                            # hook 2: re-check each rule before delivery

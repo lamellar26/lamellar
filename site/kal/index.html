@@ -58,7 +58,7 @@ lamellar run "who approves leave requests?"</pre><button onclick="navigator.clip
   <ul>
     <li><b>Your folders become a library.</b> <code>lamellar kal add &lt;folder&gt;</code> splits md, txt and docx files into passages and indexes them in SQLite under <code>~/.lamellar/kal/</code>. They are searchable at once. Running it again skips files that have not changed.</li>
     <li><b>Relevant passages are added before every task.</b> Each passage carries a <code>[ref]</code> to its source, and the total is capped (3,000 characters by default). Unrelated tasks get nothing added.</li>
-    <li><b>The model can look things up while it works.</b> Two tools, <code>kal_search</code> and <code>kal_read(ref)</code>, let it search the library and open a passage in full.</li>
+    <li><b>The model can look things up while it works.</b> Tools <code>kal_search</code> and <code>kal_read(ref)</code> let it search the library and open a passage in full.</li>
     <li><b>Nothing is rewritten by a model.</b> What the model sees is your original text. Earlier versions had a model write notes from the documents; tests showed the notes added nothing, so they were removed in 0.3.0.</li>
   </ul>
 
@@ -81,11 +81,12 @@ lamellar run "who approves leave requests?"</pre><button onclick="navigator.clip
   </table>
   <p class="small">The rerank threshold was tuned on this same set, so a fresh set is needed for a clean number.</p>
 
-  <h2>Conversation library <span class="badge">off by default</span></h2>
-  <p>Set <code>"chat_write": true</code> and each user gets a private library. One user never sees another user's library.</p>
+  <h2>Conversation library <span class="badge">on by default</span></h2>
+  <p>Each user gets a private library that stays on your machine. One user never sees another user's library. In a group chat it keeps what everyone said; set <code>"chat_write": false</code> for a group that has not agreed.</p>
   <ul>
     <li><b>What is saved:</b> what the user said and what the tools returned, after the answer is delivered. Only when a tool was used or the user stated facts; pure chat is skipped.</li>
     <li><b>What is never saved:</b> the assistant's own words. Passwords, keys, ID numbers, phone numbers, emails and amounts are masked before storing.</li>
+    <li><b>"Note this":</b> when the user says "記底", "remember this" or "take a note", the model saves the user's own words with <code>kal_note</code> and shows what was saved. If it does not, the message is saved anyway, whatever its length. An answer that says "saved" when nothing was saved is sent back to the model before the user sees it. This works even with <code>chat_write</code> off.</li>
     <li><b>How it is searched:</b> each candidate passage is scored by the model and kept only at 3 of 10 or above, so unrelated questions do not pull in long tool output.</li>
     <li><b>Plain files are the truth:</b> markdown under <code>~/.lamellar/kal/&lt;lib&gt;/sources/</code>. <code>lamellar kal rebuild</code> rebuilds the database from it.</li>
   </ul>
@@ -107,7 +108,7 @@ lamellar kal rebuild --lib chat-...      rebuild from markdown</pre></div>
     <tr><td><code>max_chars</code></td><td>3000</td><td>cap on added text</td></tr>
     <tr><td><code>min_rel</code>, <code>rel_top</code></td><td>0.05, 0.5</td><td>relevance floor; share of the best hit to keep</td></tr>
     <tr><td><code>rerank_model</code></td><td>""</td><td>optional reranker for all libraries</td></tr>
-    <tr><td><code>chat_write</code></td><td>false</td><td>conversation library on or off</td></tr>
+    <tr><td><code>chat_write</code></td><td>true</td><td>conversation library on or off (off: only "note this" is kept)</td></tr>
     <tr><td><code>chat_rerank</code></td><td>true</td><td>rerank conversation passages</td></tr>
   </table>
   <p class="small">PDF is not supported in this version.</p>

@@ -59,6 +59,15 @@ class GuardT(unittest.TestCase):
             self.assertEqual(g.check('bash', {'command': cmd})[0], 'ask', cmd)
         self.assertEqual(g.check('write_file', {'path': 'conf/.htpasswd', 'content': 'x'})[0], 'ask')
 
+    def test_self_kill_commands_denied(self):
+        g = Guard(CFG)
+        for cmd in ['pkill -f "web.py --port 8767"', 'cd x && pkill -f web.py 2>/dev/null; python3 t.py', 'pkill -9f server.py', 'pkill -u me -f app',
+                    'killall python3', 'pgrep -f web.py | xargs kill', 'pgrep -f web.py | xargs -r kill -9', 'kill $(pgrep -f "flask run")', 'kill -9 $( pgrep -f gunicorn )']:
+            act, why = g.check('bash', {'command': cmd})
+            self.assertEqual(act, 'deny', cmd); self.assertIn('PID', why)
+        for cmd in ['pkill web', 'kill $(cat .web.pid)', 'kill %1', 'fuser -k 8767/tcp', 'pgrep -f web.py', 'kill $(pgrep web)', 'grep -n pkill notes.txt', 'man pkill', 'pkill --help']:
+            self.assertEqual(g.check('bash', {'command': cmd})[0], 'allow', cmd)
+
     def test_normal_commands_allowed(self):
         g = Guard(CFG)
         for cmd in ['ls -la', 'python3 app.py', 'pytest -q', 'crontab -l', 'grep -r passwd_field src/', 'cat /etc/hostname', 'php -S 127.0.0.1:8000 & sleep 1; curl -s localhost:8000; kill %1',

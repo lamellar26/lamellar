@@ -17,6 +17,17 @@ _CMD_ZONES = [
      'This command changes system settings'),
     ('system', r'(>>?|tee(\s+-a)?|cp\s|mv\s|sed\s+-i|rm\s)[^|;&]*\s/etc/', 'This command writes to system settings under /etc'),
 ]
+# (zone, command regex, reason): denied outright, with the fix in the reason. Kills that match by command line or
+# process name can hit lamellar itself: the task text is on its command line and it runs as python3. (11-18: a model
+# ran pkill -f "web.py --port 8767", the task mentioned that string, and the agent killed itself 40 minutes in.)
+_PF = r'[^;&|\n]*?\s-\w*f(?![\w-])'   # a -f flag anywhere in the same command, alone or bundled (-f, -9f, -u me -f)
+_DENY_ZONES = [
+    ('self-kill', r'(?<![\w/.-])(pkill' + _PF + r'|killall|pgrep' + _PF + r'[^;&]*\|\s*xargs\s+(-\S+\s+)*kill|kill\s[^;&|]*\$\(\s*pgrep' + _PF + r')(?![\w-])',
+     'pkill -f, killall and kill $(pgrep -f ...) match by command line or process name and can kill lamellar itself '
+     '(your task text is on its command line). Stop a process by its PID instead: start it with '
+     '"python3 web.py --port 8767 > web.log 2>&1 & echo $! > .web.pid" and stop it with "kill $(cat .web.pid)", '
+     'or free a port with "fuser -k 8767/tcp".'),
+]
 # (zone, path regex, reason): for the file-write tools (writes are already confined to the working directory; this guards sensitive files inside it)
 _PATH_ZONES = [
     ('credentials', r'(^|/)(\.htpasswd|authorized_keys|id_(rsa|ed25519|ecdsa)(\.pub)?|\.netrc|\.pgpass)$', 'This is a credentials file'),
@@ -50,6 +61,8 @@ class Guard:
         if not self.on: return 'allow', None
         if name == 'bash':
             probe = _LOOKUP.sub(' ', subject)          # pure lookups (command -v, which, type, --help, --version) do not count
+            for zone, pat, why in _DENY_ZONES:
+                if re.search(pat, probe): return 'deny', f'[{zone}] {why}'
             for zone, pat, why in _CMD_ZONES:
                 if re.search(pat, probe): return 'ask', f'[{zone}] {why}'
         elif name in ('write_file', 'edit_file'):

@@ -145,8 +145,11 @@ class Entry:
             if self.cfg.get('worker_config'): base += ['--config', os.path.expanduser(self.cfg['worker_config'])]
         return base + ['--session', f"{self.cfg['bot']}-{chat}", '--bot', self.cfg['bot'], '--chat', chat, task]
 
-    def run(self, chat, task, on_line, alive):
-        """Run one job. on_line(text) = push progress; alive() = is the client still there (stop if not). Returns (answer, ok)."""
+    def run(self, chat, task, on_line, alive, on_ask=None):
+        """Run one job. on_line(text) = push progress; alive() = is the client still there (stop if not). Returns (answer, ok).
+        on_ask(question) -> (allow: bool, text: str) lets the entry answer the worker's "needs your approval" questions (a button, a
+        prompt); it is called in its own thread, so it may block while waiting for the person. Without it nobody can answer and
+        every such step is denied, as before."""
         me = object()
         with _wlock: _waiting.append(me)
         try:
@@ -159,8 +162,15 @@ class Entry:
             with _wlock: _waiting.remove(me)
         p = None; handed = False
         try:
-            p = subprocess.Popen(self.worker_cmd(chat, task), cwd=self.workdir(chat), stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
-                                 stderr=subprocess.DEVNULL, start_new_session=True, text=True)
+            p = subprocess.Popen(self.worker_cmd(chat, task), cwd=self.workdir(chat), stdin=subprocess.PIPE if on_ask else subprocess.DEVNULL,
+                                 stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, start_new_session=True, text=True)
+            def answer_ask(ev, p=p):
+                try: allow, text = on_ask(ev.get('question', ''))
+                except Exception as e: allow, text = False, f'{type(e).__name__} while asking; treated as denied'
+                try: p.stdin.write(json.dumps({'type': 'answer', 'id': ev.get('id'), 'allow': bool(allow), 'text': str(text or '')}) + '\n'); p.stdin.flush()
+                except (OSError, ValueError): pass                      # the worker is already gone
+            def feed_ask(ev):
+                threading.Thread(target=answer_ask, args=(ev,), daemon=True).start()
             _active[chat] = p; answer, ok, t0 = '', False, time.time(); q = []
             def reader():
                 for line in p.stdout:
@@ -174,6 +184,7 @@ class Entry:
                     ev = q.pop(0)
                     if ev is None: ended = True; break
                     if ev.get('type') == 'done': answer, ok = ev.get('answer') or '', bool(ev.get('ok')); ended = handed = True; break
+                    if ev.get('type') == 'ask' and on_ask: feed_ask(ev); continue
                     line = human(ev)
                     if line: on_line(line)
                 if ended: break
@@ -186,6 +197,9 @@ class Entry:
                     kill_group(p); on_line(f"❌ Exceeded {self.cfg['max_minutes']} minutes; aborted"); return '', False
             return answer, ok
         finally:
+            if on_ask and p is not None:
+                try: p.stdin.close()
+                except (OSError, ValueError): pass
             if handed and p is not None:
                 # Already delivered: the worker may still be doing its post-answer review (using the GPU); wait for it to finish before releasing the next job, without making the user wait
                 def finish(p=p):

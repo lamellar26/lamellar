@@ -23,9 +23,10 @@ class EntryT(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.mkdtemp()
 
-    def start(self, script, **extra):
+    def start(self, script, worker_extra=None, **extra):
         self.model = FakeModel(script)
-        wc = os.path.join(self.tmp, 'worker.json'); json.dump({'model': 'm', 'endpoint': self.model.url, 'context': 8192, 'state_dir': self.tmp + '/state'}, open(wc, 'w'))
+        wc = os.path.join(self.tmp, 'worker.json')
+        with open(wc, 'w') as f: json.dump({'model': 'm', 'endpoint': self.model.url, 'context': 8192, 'state_dir': self.tmp + '/state', **(worker_extra or {})}, f)
         cfg = {'port': 0, 'api_key': 'k', 'worker_config': wc, 'workspace': self.tmp + '/work', 'state_dir': self.tmp + '/state', **extra}
         self.entry = E.Entry(cfg); self.srv = http.server.ThreadingHTTPServer(('127.0.0.1', 0), E.make_handler(self.entry)); self.srv.daemon_threads = True
         threading.Thread(target=self.srv.serve_forever, daemon=True).start(); self.port = self.srv.server_port
@@ -41,6 +42,37 @@ class EntryT(unittest.TestCase):
         for line in r.read().decode().splitlines():
             if line.startswith('data: {'): out += json.loads(line[6:])['choices'][0]['delta'].get('content') or ''
         return out
+
+    ASK_RULE = {'guard_rules': [{'tool': 'bash', 'pattern': 'touch approved.txt', 'action': 'ask', 'reason': 'test zone'}]}
+
+    def run_job(self, script, on_ask):
+        self.start(script, worker_extra=self.ASK_RULE); lines = []
+        ans, ok = self.entry.run('ask1', 'make the file', lines.append, lambda: True, on_ask)
+        return ans, ok, lines
+
+    def test_on_ask_approve_runs_the_step(self):
+        asked = []
+        def yes(q): asked.append(q); return True, ''
+        ans, ok, lines = self.run_job([('bash', {'command': 'touch approved.txt'}), 'file made'], yes)
+        self.assertTrue(ok); self.assertEqual(ans, 'file made')
+        self.assertEqual(len(asked), 1); self.assertIn('touch approved.txt', asked[0]); self.assertIn('test zone', asked[0])
+        self.assertTrue(os.path.exists(self.tmp + '/work/ask1/approved.txt'))
+        self.assertFalse(any('needs your approval' in l for l in lines))          # the entry's own prompt replaces the progress line
+
+    def test_on_ask_deny_blocks_the_step(self):
+        ans, ok, lines = self.run_job([('bash', {'command': 'touch approved.txt'}), 'could not'], lambda q: (False, 'not now'))
+        self.assertTrue(ok); self.assertFalse(os.path.exists(self.tmp + '/work/ask1/approved.txt'))
+        self.assertIn('not now', json.dumps(self.model.seen[-1]))                  # the model is told the user's reply
+
+    def test_without_on_ask_the_step_is_denied(self):
+        self.start([('bash', {'command': 'touch approved.txt'}), 'could not'], worker_extra=self.ASK_RULE)
+        ans, ok = self.entry.run('ask2', 'make the file', lambda s: None, lambda: True)
+        self.assertTrue(ok); self.assertFalse(os.path.exists(self.tmp + '/work/ask2/approved.txt'))
+
+    def test_on_ask_error_counts_as_denied(self):
+        def boom(q): raise RuntimeError('x')
+        ans, ok, _ = self.run_job([('bash', {'command': 'touch approved.txt'}), 'could not'], boom)
+        self.assertTrue(ok); self.assertFalse(os.path.exists(self.tmp + '/work/ask1/approved.txt'))
 
     def test_builtin_ui_page_and_switch_off(self):
         self.start([])

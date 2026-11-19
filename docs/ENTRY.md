@@ -33,3 +33,5 @@ In-chat commands: `/new` starts a new conversation (the old one is archived, not
 ## Writing another entry point
 
 `lamellar.entry.server.Entry` can be reused: `Entry(cfg).run(chat, task, on_line, alive)` already covers queueing, starting the worker process, turning progress into plain language, and stopping. A new entry point only needs to handle sending and receiving.
+
+Approvals: when a step hits a guard zone (sudo, system settings, scheduling, services) the worker asks the entry layer. Pass `on_ask(question) -> (allow, text)` as a fifth argument to `run` and answer it however suits the interface (for example two buttons). It runs in its own thread, so it may wait for a person; the worker gives up after `ask_timeout` seconds (default 600), so answer sooner than that. Without `on_ask`, nobody can answer and every such step is denied, which is what the web entry does.

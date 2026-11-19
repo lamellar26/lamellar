@@ -63,6 +63,6 @@ Derived backwards from the places the first pack (example-pack) actually uses; n
 - `on_correction(text, ctx) -> None`  when the user corrects something
 - `nightly(ctx) -> None`  every night, run by `lamellar nightly` (put that in cron or a scheduled task)
 
-`ctx` is a dict: `cwd` (working directory), `cfg` (config), `session`, `armor` (requirement store). From `render_answer` on, it also has `messages` (the exchange so far, tool results included). A pack may put its own things in `ctx` (for example tool results kept for the delivery check).
+`ctx` is a dict: `cwd` (working directory), `cfg` (config), `session`, `armor` (requirement store). `messages` (the exchange so far, tool results included) is there whenever a tool runs and from `render_answer` on. A pack may put its own things in `ctx` (for example tool results kept for the delivery check).
 
 A hook error does not kill the job: the error is printed to stderr and treated as no response. A pack whose `pack.py` raises while loading is skipped the same way (and `lamellar pack install` will not enable it).

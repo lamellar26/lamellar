@@ -193,6 +193,7 @@ def run(cfg, task, cwd=None, session=''):
                     ok, out = False, (f'[lamellar blocked] Not executed. {info}.\nDo not rephrase to get around this restriction. If the task requires this step, '
                                       'stop, and state clearly in your final answer what approval or input you need from the user (for example a password).')
                 else:
+                    ctx['messages'] = messages                         # tools and packs can see what the user gave and what earlier tools returned
                     ok, out = tools.run(name, run_args, ctx)
                     if act == 'rewrite': out = f'[lamellar] The command was rewritten by a rule before running ({why}).\n' + out
             sig = (name, json.dumps(args, sort_keys=True, ensure_ascii=False))
